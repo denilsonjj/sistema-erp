@@ -41,8 +41,8 @@ const Header = ({ toggleSidebar, obras, selectedObraId, onSelectObra, user, noti
             {showObraSelector && (<ObraSelector obras={obras} selectedObraId={selectedObraId} onSelectObra={onSelectObra}/>)}
         </div>
       <div className="flex items-center space-x-4">
-        {/* Notification Bell */}
-        <div className="relative" ref={notificationRef}>
+        {/* Notification Bell (somente admin geral) */}
+        {user?.isAdmin && (<div className="relative" ref={notificationRef}>
           <button onClick={toggleNotifications} className="relative focus:outline-none p-2 hover:bg-slate-700 rounded-full transition-colors group">
             <BellIcon className={`w-6 h-6 group-hover:text-brand-light cursor-pointer transition-colors ${isNotificationsOpen ? 'text-brand-light' : 'text-brand-muted'}`}/>
             {unreadCount > 0 && (<span className="absolute top-1 right-1 flex h-3 w-3">
@@ -78,7 +78,7 @@ const Header = ({ toggleSidebar, obras, selectedObraId, onSelectObra, user, noti
                           </ul>)}
                   </div>
               </div>)}
-        </div>
+        </div>)}
 
         <div className="flex items-center space-x-3 bg-brand-primary/50 py-1 pl-1 pr-3 rounded-full border border-slate-700">
             <img src={`https://picsum.photos/seed/${user?.username || 'user'}/40/40`} alt="User Avatar" className="w-8 h-8 rounded-full border border-brand-accent"/>

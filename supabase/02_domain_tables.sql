@@ -180,7 +180,8 @@ create table if not exists public.bridge_materials (
   unit text,
   unit_price numeric(14,4) not null default 0,
   freight_value numeric(14,2) not null default 0,
-  total_value numeric(14,2) generated always as ((coalesce(quantity, 0) * coalesce(unit_price, 0)) + coalesce(freight_value, 0)) stored,
+  tax_value numeric(14,2) not null default 0,
+  total_value numeric(14,2) generated always as ((coalesce(quantity, 0) * coalesce(unit_price, 0)) + coalesce(freight_value, 0) + coalesce(tax_value, 0)) stored,
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
@@ -215,6 +216,7 @@ create table if not exists public.bridge_employees (
   days_worked integer not null default 0,
   start_date date not null default current_date,
   status text not null default 'Trabalhando',
+  de_baixada_since date,
   termination_date date,
   breakfast_cost numeric(14,2) default 0,
   lunch_cost numeric(14,2) default 0,
@@ -386,6 +388,19 @@ create table if not exists public.usina_tank_capacities (
   unique (obra_id, product)
 );
 
+create table if not exists public.app_activity_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references public.profiles(id) on delete set null,
+  actor_name text not null,
+  actor_role text,
+  event_type text not null default 'info',
+  message text not null,
+  context jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  client_updated_at timestamptz not null default timezone('utc', now())
+);
+
 
 -- Indices
 
@@ -407,6 +422,8 @@ create index if not exists idx_usina_agg_obra_date on public.usina_aggregate_del
 create index if not exists idx_usina_bitu_obra_date on public.usina_bituminous_deliveries(obra_id, delivery_date desc);
 create index if not exists idx_usina_prod_obra_date on public.usina_daily_production(obra_id, production_date desc);
 create index if not exists idx_usina_load_obra_date on public.usina_load_entries(obra_id, load_date desc);
+create index if not exists idx_app_activity_logs_created_at on public.app_activity_logs(created_at desc);
+create index if not exists idx_app_activity_logs_actor_id on public.app_activity_logs(actor_id);
 
 
 -- Timestamps triggers para todas as tabelas de dominio
@@ -438,7 +455,8 @@ begin
     'usina_bituminous_deliveries',
     'usina_daily_production',
     'usina_load_entries',
-    'usina_tank_capacities'
+    'usina_tank_capacities',
+    'app_activity_logs'
   ]
   loop
     execute format('drop trigger if exists trg_%I_timestamps on public.%I;', t, t);

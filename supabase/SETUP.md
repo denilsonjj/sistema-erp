@@ -17,6 +17,9 @@ No painel do projeto:
    1. `supabase/01_core_auth_rbac.sql`
    2. `supabase/02_domain_tables.sql`
    3. `supabase/03_security_rls.sql`
+   4. `supabase/04_update_user_limit_to_25.sql` (somente se seu projeto ja existia com limite 15)
+   5. `supabase/05_pontes_tax_and_baixada.sql` (somente se seu projeto ja existia antes dos campos de impostos e "de baixada")
+   6. `supabase/06_activity_logs.sql` (somente se seu projeto ja existia antes do feed global de notificacoes)
 
 ## 3) Criar o primeiro usuario administrador
 1. Va em `Authentication` -> `Users` -> `Add user`.
@@ -33,8 +36,8 @@ No painel do projeto:
    - `VITE_SUPABASE_ANON_KEY=...`
 
 ## 5) Limite de usuarios
-- O banco bloqueia mais de **15 usuarios ativos** (regra do plano/negocio).
-- Erro esperado ao exceder: `Limite de 15 usuarios ativos atingido.`
+- O banco bloqueia mais de **25 usuarios ativos** (regra do plano/negocio).
+- Erro esperado ao exceder: `Limite de 25 usuarios ativos atingido.`
 
 ## 6) Modelo de sincronizacao offline (ja preparado no schema)
 - Todas as tabelas tem:
@@ -60,4 +63,5 @@ Para criar/excluir usuarios direto na tela `Configuracoes`, publique a function:
 Observacoes:
 - Nao use `service_role` no frontend.
 - A function valida se o solicitante e admin ativo antes de criar/excluir usuario.
-- O limite de 15 usuarios ativos continua valendo.
+- O limite de 25 usuarios ativos continua valendo.
+- Campo `username` agora pode ser omitido na criacao via app; o sistema usa o email como base.

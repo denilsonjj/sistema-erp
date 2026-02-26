@@ -8,8 +8,7 @@ import {
     LogoutIcon,
     BridgeIcon,
     FactoryIcon,
-    FuelIcon,
-    ChartIcon
+    FuelIcon
 } from './icons';
 
 const Logo = ({ size = 'md' }) => {
@@ -50,7 +49,6 @@ const Sidebar = ({ activeView, setActiveView, isSidebarOpen, setSidebarOpen, use
         { view: 'Pontes', label: 'Pontes', icon: <BridgeIcon />, permissionKey: 'viewPontes' },
         { view: 'Usina', label: 'Usina de Asfalto', icon: <FactoryIcon />, permissionKey: 'viewUsina' },
         { view: 'Banco de Dados', label: 'Banco de Dados', icon: <DatabaseIcon />, permissionKey: 'editBancoDados' },
-        { view: 'Relatorios', label: 'Relatorios', icon: <ChartIcon />, permissionKey: 'viewRelatorios' },
         { view: 'Configuracoes', label: 'Configuracoes', icon: <CogIcon />, permissionKey: 'editConfiguracoes' }
     ];
 
@@ -58,9 +56,14 @@ const Sidebar = ({ activeView, setActiveView, isSidebarOpen, setSidebarOpen, use
 
     return (
         <>
-            <aside className={`absolute lg:relative z-20 w-64 min-h-screen bg-brand-secondary p-4 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 flex flex-col border-r border-slate-700`}>
-                <div className="flex items-center mb-10 justify-center pt-4">
-                    <Logo size="md" />
+            <aside className={`absolute lg:relative z-20 w-64 min-h-screen bg-brand-secondary p-4 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 flex flex-col border-r border-slate-700 overflow-y-auto`}>
+                <div className="flex items-center mb-6 lg:mb-10 justify-center pt-[max(0.5rem,env(safe-area-inset-top))]">
+                    <div className="lg:hidden [@media(orientation:landscape)]:hidden">
+                        <Logo size="sm" />
+                    </div>
+                    <div className="hidden lg:block">
+                        <Logo size="md" />
+                    </div>
                 </div>
                 <nav className="flex-1 overflow-y-auto">
                     <ul>

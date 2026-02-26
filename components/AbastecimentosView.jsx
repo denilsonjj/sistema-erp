@@ -33,6 +33,8 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
     const [extName, setExtName] = useState('');
     const [extDiesel, setExtDiesel] = useState('');
     const [extObs, setExtObs] = useState('');
+    const [fuelEntryDate, setFuelEntryDate] = useState(todayStr);
+    const [externalEntryDate, setExternalEntryDate] = useState(todayStr);
     const filteredRecords = useMemo(() => {
         return records.filter(r => {
             const inDateRange = r.date >= reportStartDate && r.date <= reportEndDate;
@@ -78,7 +80,7 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
             setSelectedMachineForLub(null);
         }
     };
-    const handleQuickFuel = (machine, liters, newHours) => {
+    const handleQuickFuel = (machine, liters, newHours, entryDate) => {
         const hoursToRecord = newHours !== undefined ? newHours : machine.hours;
         const lubData = lubricationDataMap[machine.id];
         let greaseStr = '-';
@@ -98,7 +100,7 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
         }
         const newRecord = {
             id: Date.now().toString(),
-            date: todayStr,
+            date: entryDate || fuelEntryDate || todayStr,
             machineId: machine.id,
             prefix: machine.prefix,
             machineName: machine.name,
@@ -119,7 +121,7 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
         e.preventDefault();
         if (!extName || !extDiesel)
             return;
-        const newRecord = { id: Date.now().toString(), date: todayStr, machineId: 'external', prefix: extPlate || 'AVULSO', machineName: extName, h_km: '-', diesel: extDiesel, arla: '-', grease: '-', details: extObs || undefined };
+        const newRecord = { id: Date.now().toString(), date: externalEntryDate || todayStr, machineId: 'external', prefix: extPlate || 'AVULSO', machineName: extName, h_km: '-', diesel: extDiesel, arla: '-', grease: '-', details: extObs || undefined };
         setRecords(prev => [newRecord, ...prev]);
         setExtPlate('');
         setExtName('');
@@ -218,13 +220,28 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
 
       <div className="space-y-6">
           <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-blue-500">
-              <h3 className="text-lg font-semibold text-brand-light mb-4 flex items-center gap-2"><TruckIcon className="w-5 h-5 text-blue-400"/> Abastecimento de Frota</h3>
-              <MachineList machines={machines} maintenanceTasks={maintenanceTasks} viewMode="abastecimento" onAddHorimetro={onAddHorimetro} onSelectMachine={onSelectMachine} onUpdateMachineStatus={onUpdateMachineStatus} onRegisterFuel={handleQuickFuel} onOpenLubrication={handleOpenLubrication} lubricationStatusMap={lubStatusMap}/>
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
+                  <h3 className="text-lg font-semibold text-brand-light flex items-center gap-2"><TruckIcon className="w-5 h-5 text-blue-400"/> Abastecimento de Frota</h3>
+                  <div className="w-full md:w-[320px] bg-brand-primary border border-slate-700 rounded-lg px-3 py-2">
+                      <label className="block text-[10px] font-bold text-brand-muted uppercase mb-1">Data dos lançamentos desta tela</label>
+                      <input
+                          type="date"
+                          value={fuelEntryDate}
+                          onChange={(e) => setFuelEntryDate(e.target.value || todayStr)}
+                          className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 text-xs outline-none"
+                      />
+                      <p className="mt-1 text-[10px] text-brand-muted">
+                          Todo registro salvo em "Abastecimento de Frota" usará esta data.
+                      </p>
+                  </div>
+              </div>
+              <MachineList machines={machines} maintenanceTasks={maintenanceTasks} viewMode="abastecimento" onAddHorimetro={onAddHorimetro} onSelectMachine={onSelectMachine} onUpdateMachineStatus={onUpdateMachineStatus} onRegisterFuel={handleQuickFuel} onOpenLubrication={handleOpenLubrication} lubricationStatusMap={lubStatusMap} entryDate={fuelEntryDate}/>
           </div>
 
           <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-purple-500">
               <h3 className="text-lg font-semibold text-brand-light mb-4 flex items-center gap-2"><PlusIcon className="w-5 h-5 text-purple-400"/> Equipamento Avulso / Externo</h3>
-              <form onSubmit={handleExternalFuel} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <form onSubmit={handleExternalFuel} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                  <input type="date" value={externalEntryDate} onChange={e => setExternalEntryDate(e.target.value)} className="bg-brand-primary border border-slate-600 text-brand-light rounded p-2 focus:ring-1 focus:ring-purple-400 outline-none"/>
                   <input type="text" value={extPlate} onChange={e => setExtPlate(e.target.value)} className="bg-brand-primary border border-slate-600 text-brand-light rounded p-2 focus:ring-1 focus:ring-purple-400 outline-none" placeholder="Placa/Identificação"/>
                   <input type="text" value={extName} onChange={e => setExtName(e.target.value)} className="bg-brand-primary border border-slate-600 text-brand-light rounded p-2 focus:ring-1 focus:ring-purple-400 outline-none" placeholder="Equipamento *" required/>
                   <input type="number" value={extDiesel} onChange={e => setExtDiesel(e.target.value)} className="bg-brand-primary border border-slate-600 text-brand-light rounded p-2 focus:ring-1 focus:ring-purple-400 outline-none" placeholder="Diesel (L) *" required/>

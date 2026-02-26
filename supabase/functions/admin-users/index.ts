@@ -17,6 +17,14 @@ const APP_PERMISSION_KEYS = [
   'viewUsina'
 ]
 
+const deriveUsernameFromEmail = (email: string) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return normalizedEmail
+  }
+  return `usuario_${Date.now()}`
+}
+
 const badRequest = (message: string) =>
   new Response(JSON.stringify({ ok: false, error: message }), {
     status: 400,
@@ -87,14 +95,18 @@ Deno.serve(async (req) => {
       const password = String(body?.password || '')
       const name = String(body?.name || '').trim()
       const role = String(body?.role || 'Operador').trim() || 'Operador'
-      const username = String(body?.username || '').trim()
+      const rawUsername = String(body?.username || '').trim()
+      const username = rawUsername || deriveUsernameFromEmail(email)
       const allowedObraId = body?.allowedObraId === 'all' ? null : (body?.allowedObraId || null)
       const permissions = body?.permissions || {}
       const isAdmin = !!body?.isAdmin
       const isActive = body?.isActive !== false
 
-      if (!email || !password || !name || !username) {
-        return badRequest('Email, senha, nome e username sao obrigatorios.')
+      if (!email || !password || !name) {
+        return badRequest('Email, senha e nome sao obrigatorios.')
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return badRequest('Informe um email valido para criar o usuario.')
       }
 
       if (password.length < 6) {
@@ -110,8 +122,8 @@ Deno.serve(async (req) => {
         if (countError) {
           throw countError
         }
-        if ((count || 0) >= 15) {
-          return badRequest('Limite de 15 usuarios ativos atingido.')
+        if ((count || 0) >= 25) {
+          return badRequest('Limite de 25 usuarios ativos atingido.')
         }
       }
 

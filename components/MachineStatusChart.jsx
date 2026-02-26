@@ -13,8 +13,8 @@ const MachineStatusChart = ({ data }) => {
         [MachineStatus.Disponível]: '#60A5FA', // blue-400
         [MachineStatus.MechanicalProblem]: '#F87171', // red-400
     };
-    return (<div style={{ width: '100%', height: 250 }}>
-      <ResponsiveContainer>
+    return (<div style={{ width: '100%', minWidth: 240, height: 250, minHeight: 220 }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={240} minHeight={220}>
         <PieChart>
           <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5} dataKey="value">
             {chartData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={COLORS[entry.name]}/>))}

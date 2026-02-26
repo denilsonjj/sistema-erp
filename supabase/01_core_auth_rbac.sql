@@ -116,8 +116,8 @@ begin
      where p.is_active
        and p.id <> new.id;
 
-    if v_active_count >= 15 then
-      raise exception 'Limite de 15 usuarios ativos atingido.'
+    if v_active_count >= 25 then
+      raise exception 'Limite de 25 usuarios ativos atingido.'
         using errcode = 'check_violation';
     end if;
   end if;
@@ -146,8 +146,8 @@ declare
   v_active_count integer;
 begin
   select count(*) into v_active_count from public.profiles where is_active;
-  if v_active_count >= 15 then
-    raise exception 'Limite de 15 usuarios ativos atingido.'
+  if v_active_count >= 25 then
+    raise exception 'Limite de 25 usuarios ativos atingido.'
       using errcode = 'check_violation';
   end if;
 

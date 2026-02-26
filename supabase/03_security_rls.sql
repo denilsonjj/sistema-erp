@@ -96,7 +96,8 @@ begin
     'usina_bituminous_deliveries',
     'usina_daily_production',
     'usina_load_entries',
-    'usina_tank_capacities'
+    'usina_tank_capacities',
+    'app_activity_logs'
   ]
   loop
     execute format('alter table public.%I enable row level security;', t);
@@ -157,6 +158,23 @@ for all
 to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
+
+drop policy if exists app_activity_logs_select_admin on public.app_activity_logs;
+create policy app_activity_logs_select_admin
+on public.app_activity_logs
+for select
+to authenticated
+using (public.current_user_is_admin());
+
+drop policy if exists app_activity_logs_insert_authenticated on public.app_activity_logs;
+create policy app_activity_logs_insert_authenticated
+on public.app_activity_logs
+for insert
+to authenticated
+with check (
+  auth.uid() is not null
+  and (actor_id is null or actor_id = auth.uid())
+);
 
 drop policy if exists obras_select on public.obras;
 create policy obras_select

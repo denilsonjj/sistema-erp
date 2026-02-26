@@ -4,7 +4,7 @@ Sistema interno para gestão de obras, equipamentos e manutenção, com operaç�
 
 ## Visão Geral
 
-Este projeto é o frontend em React (Vite) convertido de TypeScript para JavaScript, com foco em simplicidade e performance para uso por até 15 usuários.
+Este projeto é o frontend em React (Vite) convertido de TypeScript para JavaScript, com foco em simplicidade e performance para uso por até 25 usuários.
 
 ### Módulos principais
 - `Dashboard`: visão gerencial e indicadores.
@@ -59,16 +59,20 @@ No `SQL Editor`, execute:
 1. `supabase/01_core_auth_rbac.sql`
 2. `supabase/02_domain_tables.sql`
 3. `supabase/03_security_rls.sql`
+4. `supabase/04_update_user_limit_to_25.sql` (somente se o projeto ja existia com limite 15)
+5. `supabase/05_pontes_tax_and_baixada.sql` (somente para bancos antigos, adiciona impostos em materiais e data efetiva de "de baixada")
+6. `supabase/06_activity_logs.sql` (somente para bancos antigos, cria feed global de ações para admin)
 
 ### 2) Primeiro usuário (admin)
 - Crie o primeiro usuário em `Authentication > Users`.
 - O trigger promove automaticamente o primeiro usuário para admin.
 
 ### 3) Limite de usuários
-- Regra de negócio ativa no banco: máximo de `15 usuários ativos`.
+- Regra de negócio ativa no banco: máximo de `25 usuários ativos`.
 
 ### 4) Edge Function `admin-users` (CRUD de usuários no app)
 O frontend já chama `admin-users` para criação/exclusão de usuários na tela `Configurações`.
+O `username` pode ser omitido na criação; quando vazio, a function deriva automaticamente a partir do email.
 
 Configuração necessária na função:
 - Segredos:
@@ -146,7 +150,7 @@ Mensagem esperada:
 ## Status atual
 - Frontend convertido para JavaScript.
 - Fluxo principal com Supabase integrado.
-- RBAC e limite de 15 usuários implementados.
+- RBAC e limite de 25 usuários implementados.
 - Offline queue + sincronização implementados.
 - PWA base implementada.
 

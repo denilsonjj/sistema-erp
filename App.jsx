@@ -4,7 +4,6 @@ import Header from './components/Header';
 import DashboardView from './components/DashboardView';
 import EmCampoView from './components/EmCampoView';
 import OficinaView from './components/OficinaView';
-import RelatoriosView from './components/RelatoriosView';
 import ConfiguracoesView from './components/ConfiguracoesView';
 import DatabaseView from './components/DatabaseView';
 import LoginView from './components/LoginView';
@@ -33,10 +32,14 @@ const DEFAULT_USER_PERMISSIONS = {
     viewUsina: false
 };
 const APP_PERMISSION_KEYS = Object.keys(DEFAULT_USER_PERMISSIONS);
-const ORDERED_VIEWS = ['Dashboard', 'Em Campo', 'Abastecimentos', 'Oficina', 'Pontes', 'Usina', 'Banco de Dados', 'Relatorios', 'Configuracoes'];
+const ORDERED_VIEWS = ['Dashboard', 'Em Campo', 'Abastecimentos', 'Oficina', 'Pontes', 'Usina', 'Banco de Dados', 'Configuracoes'];
+const MAX_ACTIVE_USERS = 25;
 const OFFLINE_QUEUE_KEY = 'erp_offline_queue_v1';
 const OFFLINE_CACHE_PREFIX = 'erp_cache_v1_';
 const NOTIFICATION_SOUND_KEY = 'erp_notification_sound_enabled_v1';
+const ACTIVE_VIEW_KEY = 'erp_active_view_v1';
+const AUDIT_LOG_TABLE = 'app_activity_logs';
+const MAX_ADMIN_NOTIFICATIONS = 200;
 const DEFAULT_TANK_CAPACITIES = { CAP: 60, EAI: 30, 'RR-2C': 30, 'RR-1C': 30 };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isBrowser = typeof window !== 'undefined';
@@ -64,11 +67,19 @@ const writeLocalJson = (key, value) => {
 };
 const getCacheKey = (userId) => `${OFFLINE_CACHE_PREFIX}${userId || 'anon'}`;
 const isUuid = (value) => typeof value === 'string' && UUID_PATTERN.test(value);
+const arePermissionsEqual = (left, right) => APP_PERMISSION_KEYS.every((key) => !!left?.[key] === !!right?.[key]);
 const createUuid = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     }
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+const deriveUsernameFromEmail = (email) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        return normalizedEmail;
+    }
+    return `usuario_${Date.now()}`;
 };
 const resolveUpdater = (updater, previous) => (typeof updater === 'function' ? updater(previous) : updater);
 const normalizeListIds = (list) => (list || []).map((item) => {
@@ -87,10 +98,24 @@ const normalizeTimeFromTs = (ts) => {
         return '';
     return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 };
+const mapActivityRowToNotification = (row, read = false) => {
+    const actorName = row?.actor_name || 'Usuario';
+    const actorRole = row?.actor_role || 'Operador';
+    return {
+        id: row?.id || createUuid(),
+        timestamp: new Date(row?.created_at || row?.client_updated_at || nowIso()),
+        message: `${actorName} (${actorRole}): ${row?.message || ''}`,
+        type: row?.event_type || 'info',
+        read,
+        actorName,
+        actorRole,
+        metadata: row?.context || {}
+    };
+};
 const App = () => {
     // ESTADO INICIAL: NULL PARA FORÇAR TELA DE LOGIN
     const [user, setUser] = useState(null);
-    const [activeView, setActiveView] = useState('Dashboard');
+    const [activeView, setActiveView] = useState(() => readLocalJson(ACTIVE_VIEW_KEY, 'Dashboard') || 'Dashboard');
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [selectedMachineDetail, setSelectedMachineDetail] = useState(null);
     // DADOS DA FROTA INICIALIZADOS
@@ -158,6 +183,14 @@ const App = () => {
     const notificationAudioContextRef = useRef(null);
     const canPlayNotificationSoundRef = useRef(false);
     const flushingOfflineQueueRef = useRef(false);
+    const pendingSyncAlertCountRef = useRef(0);
+    const currentAuthUserIdRef = useRef(null);
+    useEffect(() => {
+        writeLocalJson(ACTIVE_VIEW_KEY, activeView);
+    }, [activeView]);
+    useEffect(() => {
+        currentAuthUserIdRef.current = user?.id || null;
+    }, [user?.id]);
     useEffect(() => {
         writeLocalJson(NOTIFICATION_SOUND_KEY, notificationSoundEnabled);
     }, [notificationSoundEnabled]);
@@ -206,12 +239,150 @@ const App = () => {
         oscillator.start(now);
         oscillator.stop(now + 0.15);
     }, []);
+    const logActivityEvent = useCallback(async ({ message, type = 'info', metadata = {} }) => {
+        if (!user?.id || !message) {
+            return;
+        }
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            return;
+        }
+        try {
+            const supabase = getSupabaseClient();
+            const { error } = await supabase.from(AUDIT_LOG_TABLE).insert({
+                actor_id: user.id,
+                actor_name: user.name || user.username || user.email || 'Usuario',
+                actor_role: user.role || 'Operador',
+                event_type: type || 'info',
+                message,
+                context: metadata || {},
+                client_updated_at: nowIso()
+            });
+            if (error) {
+                throw error;
+            }
+        }
+        catch (error) {
+            console.error('Falha ao gravar log de atividade:', error);
+        }
+    }, [user?.email, user?.id, user?.name, user?.role, user?.username]);
     const addNotification = (message, type, options) => {
-        setNotifications(prev => [{ id: Date.now().toString(), timestamp: new Date(), message, type, read: false }, ...prev]);
+        const now = new Date();
+        const dedupeWindowMs = Number(options?.dedupeWindowMs ?? 15000);
+        const shouldStoreLocal = !user?.isAdmin || !!options?.localOnly;
+        if (shouldStoreLocal) {
+            setNotifications(prev => {
+                const nowMs = now.getTime();
+                const hasRecentDuplicate = prev.some((item) => item.message === message &&
+                    item.type === type &&
+                    nowMs - new Date(item.timestamp).getTime() < dedupeWindowMs);
+                if (hasRecentDuplicate) {
+                    return prev;
+                }
+                return [{
+                        id: Date.now().toString(),
+                        timestamp: now,
+                        message,
+                        type,
+                        read: false,
+                        actorName: user?.name || user?.username || user?.email || 'Usuario',
+                        actorRole: user?.role || 'Operador',
+                        metadata: options?.metadata || {}
+                    }, ...prev];
+            });
+        }
+        if (!options?.skipAudit) {
+            void logActivityEvent({
+                message,
+                type,
+                metadata: options?.metadata || {}
+            });
+        }
         if (!options?.silent && notificationSoundEnabled) {
             playNotificationSound();
         }
     };
+    useEffect(() => {
+        if (!user) {
+            setNotifications([]);
+            return;
+        }
+        if (!user.isAdmin) {
+            setNotifications([]);
+        }
+    }, [user?.id, user?.isAdmin]);
+    useEffect(() => {
+        if (!user?.isAdmin) {
+            return;
+        }
+        let isMounted = true;
+        let channel = null;
+        const loadAdminNotifications = async () => {
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                return;
+            }
+            try {
+                const supabase = getSupabaseClient();
+                const { data, error } = await supabase
+                    .from(AUDIT_LOG_TABLE)
+                    .select('id, created_at, actor_name, actor_role, event_type, message, context')
+                    .order('created_at', { ascending: false })
+                    .limit(MAX_ADMIN_NOTIFICATIONS);
+                if (error) {
+                    throw error;
+                }
+                if (!isMounted) {
+                    return;
+                }
+                setNotifications((prev) => {
+                    const previousReadMap = new Map(prev.map((item) => [item.id, item.read]));
+                    return (data || []).map((row) => mapActivityRowToNotification(row, previousReadMap.get(row.id) === true));
+                });
+            }
+            catch (error) {
+                console.error('Falha ao carregar feed global de notificacoes:', error);
+            }
+        };
+        const setupRealtimeFeed = () => {
+            try {
+                const supabase = getSupabaseClient();
+                channel = supabase
+                    .channel(`admin-activity-feed-${user.id}`)
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: AUDIT_LOG_TABLE }, (payload) => {
+                    const item = mapActivityRowToNotification(payload.new, false);
+                    setNotifications((prev) => {
+                        if (prev.some((entry) => entry.id === item.id)) {
+                            return prev;
+                        }
+                        return [item, ...prev].slice(0, MAX_ADMIN_NOTIFICATIONS);
+                    });
+                    if (notificationSoundEnabled) {
+                        playNotificationSound();
+                    }
+                })
+                    .subscribe();
+            }
+            catch (error) {
+                console.error('Falha ao iniciar realtime das notificacoes:', error);
+            }
+        };
+        void loadAdminNotifications().then(() => {
+            if (isMounted) {
+                setupRealtimeFeed();
+            }
+        });
+        return () => {
+            isMounted = false;
+            if (channel) {
+                try {
+                    const supabase = getSupabaseClient();
+                    void supabase.removeChannel(channel);
+                }
+                catch (_error) {
+                    channel?.unsubscribe?.();
+                }
+            }
+        };
+    }, [notificationSoundEnabled, playNotificationSound, user?.id, user?.isAdmin]);
     const getOfflineQueue = useCallback(() => readLocalJson(OFFLINE_QUEUE_KEY, []), []);
     const setOfflineQueue = useCallback((queue) => {
         writeLocalJson(OFFLINE_QUEUE_KEY, queue);
@@ -319,7 +490,21 @@ const App = () => {
                 isAdmin: !!profile?.is_admin,
                 isActive: profile?.is_active !== false
             };
-            setUser(normalizedUser);
+            setUser((previousUser) => {
+                if (!previousUser) {
+                    return normalizedUser;
+                }
+                const sameUser = previousUser.id === normalizedUser.id &&
+                    previousUser.name === normalizedUser.name &&
+                    previousUser.role === normalizedUser.role &&
+                    previousUser.username === normalizedUser.username &&
+                    previousUser.email === normalizedUser.email &&
+                    previousUser.allowedObraId === normalizedUser.allowedObraId &&
+                    previousUser.isAdmin === normalizedUser.isAdmin &&
+                    previousUser.isActive === normalizedUser.isActive &&
+                    arePermissionsEqual(previousUser.permissions, normalizedUser.permissions);
+                return sameUser ? previousUser : normalizedUser;
+            });
             setUsers((prev) => {
                 const others = prev.filter((u) => u.id !== normalizedUser.id);
                 return [normalizedUser, ...others];
@@ -330,7 +515,6 @@ const App = () => {
             else {
                 setSelectedObraId('all');
             }
-            setActiveView('Dashboard');
         }
         catch (error) {
             console.error('Erro ao carregar perfil autenticado:', error);
@@ -376,10 +560,20 @@ const App = () => {
             }
         };
         bootstrap();
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
             if (!isMounted)
                 return;
-            loadAuthenticatedUser(session?.user || null);
+            if (event === 'TOKEN_REFRESHED') {
+                return;
+            }
+            const sessionUserId = session?.user?.id || null;
+            const currentUserId = currentAuthUserIdRef.current;
+            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') && sessionUserId && currentUserId === sessionUserId) {
+                return;
+            }
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+                loadAuthenticatedUser(session?.user || null);
+            }
         });
         subscription = listener?.subscription || null;
         return () => {
@@ -434,8 +628,8 @@ const App = () => {
                 supabase.from('fuel_records').select('id, record_date, machine_id, prefix, machine_name, h_km, diesel, arla, grease, details').is('deleted_at', null).order('record_date', { ascending: false }),
                 supabase.from('diesel_deliveries').select('id, delivery_date, liters, supplier, ticket_number, price_per_liter, total_cost').is('deleted_at', null).order('delivery_date', { ascending: false }),
                 supabase.from('bridge_projects').select('id, obra_id, name, status, start_date, last_check_in_date').is('deleted_at', null).order('start_date', { ascending: false }),
-                supabase.from('bridge_materials').select('id, bridge_project_id, receipt_date, emission_date, supplier, doc_type, doc_number, material, quantity, unit, unit_price, freight_value, total_value').is('deleted_at', null).order('receipt_date', { ascending: false }),
-                supabase.from('bridge_employees').select('id, bridge_project_id, name, role, salary, days_worked, start_date, status, termination_date, breakfast_cost, lunch_cost, dinner_cost, travel_cost, accommodation_cost, total_additional_cost, severance_pending').is('deleted_at', null).order('name', { ascending: true }),
+                supabase.from('bridge_materials').select('id, bridge_project_id, receipt_date, emission_date, supplier, doc_type, doc_number, material, quantity, unit, unit_price, freight_value, tax_value, total_value').is('deleted_at', null).order('receipt_date', { ascending: false }),
+                supabase.from('bridge_employees').select('id, bridge_project_id, name, role, salary, days_worked, start_date, status, termination_date, breakfast_cost, lunch_cost, dinner_cost, travel_cost, accommodation_cost, total_additional_cost, severance_pending, de_baixada_since').is('deleted_at', null).order('name', { ascending: true }),
                 supabase.from('bridge_fixed_costs').select('id, bridge_project_id, description, value, cost_type').is('deleted_at', null).order('created_at', { ascending: false }),
                 supabase.from('bridge_daily_logs').select('id, bridge_project_id, log_date, weather, description').is('deleted_at', null).order('log_date', { ascending: false }),
                 supabase.from('bridge_daily_log_equipments').select('id, daily_log_id, prefix, daily_cost').is('deleted_at', null).order('created_at', { ascending: false }),
@@ -645,7 +839,8 @@ const App = () => {
                 unit: row.unit || 'un',
                 unitPrice: Number(row.unit_price || 0),
                 freightValue: Number(row.freight_value || 0),
-                totalValue: Number(row.total_value || (Number(row.quantity || 0) * Number(row.unit_price || 0) + Number(row.freight_value || 0)))
+                taxValue: Number(row.tax_value || 0),
+                totalValue: Number(row.total_value || (Number(row.quantity || 0) * Number(row.unit_price || 0) + Number(row.freight_value || 0) + Number(row.tax_value || 0)))
             }));
             const normalizedBridgeEmployees = (bridgeEmployeesRows || []).map((row) => ({
                 id: row.id,
@@ -663,7 +858,8 @@ const App = () => {
                 travelCost: Number(row.travel_cost || 0),
                 accommodationCost: Number(row.accommodation_cost || 0),
                 totalAdditionalCost: Number(row.total_additional_cost || 0),
-                severancePending: !!row.severance_pending
+                severancePending: !!row.severance_pending,
+                deBaixadaSince: row.de_baixada_since || null
             }));
             const normalizedBridgeFixedCosts = (bridgeFixedRows || []).map((row) => ({
                 id: row.id,
@@ -678,6 +874,7 @@ const App = () => {
                     equipmentByDailyLog[row.daily_log_id] = [];
                 }
                 equipmentByDailyLog[row.daily_log_id].push({
+                    id: row.id,
                     prefix: row.prefix || '',
                     dailyCost: Number(row.daily_cost || 0)
                 });
@@ -781,7 +978,7 @@ const App = () => {
         }
         catch (error) {
             console.error('Erro ao carregar dados base do Supabase:', error);
-            addNotification('Nao foi possivel carregar dados base do Supabase.', 'alert');
+            addNotification('Nao foi possivel carregar dados base do Supabase.', 'alert', { skipAudit: true, localOnly: true, dedupeWindowMs: 300000 });
         }
     }, [saveSnapshotCache, selectedObraId, user]);
     useEffect(() => {
@@ -856,7 +1053,7 @@ const App = () => {
         }
         catch (error) {
             console.error('Erro ao carregar usuarios:', error);
-            addNotification('Nao foi possivel carregar usuarios/permissoes.', 'alert');
+            addNotification('Nao foi possivel carregar usuarios/permissoes.', 'alert', { skipAudit: true, localOnly: true, dedupeWindowMs: 300000 });
         }
         finally {
             setUsersLoading(false);
@@ -877,6 +1074,7 @@ const App = () => {
         }
         const queue = getOfflineQueue();
         if (!queue.length) {
+            pendingSyncAlertCountRef.current = 0;
             return;
         }
         flushingOfflineQueueRef.current = true;
@@ -898,14 +1096,24 @@ const App = () => {
             }
             setOfflineQueue(failed);
             if (flushedCount > 0) {
-                addNotification(`${flushedCount} alteracoes offline sincronizadas.`, 'success');
+                addNotification(`${flushedCount} alteracoes offline sincronizadas.`, 'success', { skipAudit: true, localOnly: true });
                 await fetchCoreData();
                 if (user?.permissions?.editConfiguracoes) {
                     await fetchUsers();
                 }
             }
             if (failed.length > 0) {
-                addNotification(`${failed.length} alteracoes continuam pendentes para sincronizar.`, 'alert');
+                if (pendingSyncAlertCountRef.current !== failed.length) {
+                    addNotification(`${failed.length} alteracoes continuam pendentes para sincronizar.`, 'alert', {
+                        skipAudit: true,
+                        localOnly: true,
+                        dedupeWindowMs: 1800000
+                    });
+                    pendingSyncAlertCountRef.current = failed.length;
+                }
+            }
+            else {
+                pendingSyncAlertCountRef.current = 0;
             }
         }
         finally {
@@ -1163,6 +1371,8 @@ const App = () => {
         addNotification(`Status atualizado para ${newStatus}`, newStatus === 'Operando' ? 'success' : 'alert');
     };
     const handleSaveOficinaDetails = async (machineId, details) => {
+        const previousMachine = machines.find((item) => item.id === machineId);
+        const previousForecastDate = previousMachine?.releaseForecastDate || '';
         setMachines(prev => prev.map(m => {
             if (m.id === machineId) {
                 return { ...m, ...details };
@@ -1182,6 +1392,24 @@ const App = () => {
             match: { id: machineId }
         }, { silentOffline: true });
         setOficinaEditModalOpen(false);
+        const nextForecastDate = details.releaseForecastDate || '';
+        if (previousForecastDate !== nextForecastDate) {
+            const machinePrefix = previousMachine?.prefix || 'equipamento';
+            const previousLabel = previousForecastDate ? new Date(`${previousForecastDate}T00:00:00`).toLocaleDateString('pt-BR') : 'sem previsao';
+            const nextLabel = nextForecastDate ? new Date(`${nextForecastDate}T00:00:00`).toLocaleDateString('pt-BR') : 'sem previsao';
+            addNotification(`Previsao de liberacao do ${machinePrefix} alterada de ${previousLabel} para ${nextLabel}.`, 'info', {
+                dedupeWindowMs: 0,
+                metadata: {
+                    event: 'forecast_update',
+                    machineId,
+                    machinePrefix,
+                    fromLabel: previousLabel,
+                    toLabel: nextLabel,
+                    previousDate: previousForecastDate || null,
+                    nextDate: nextForecastDate || null
+                }
+            });
+        }
         addNotification('Detalhes da oficina atualizados com sucesso', 'success');
     };
     // HANDLERS FOR DATABASE VIEW
@@ -1602,16 +1830,45 @@ const App = () => {
             onConflict: 'id'
         }, { silentOffline: true });
     };
+    const handleDeleteBridgeProject = async (projectId) => {
+        if (!projectId) {
+            return;
+        }
+        setBridgeProjects((prev) => prev.filter((item) => item.id !== projectId));
+        setBridgeMaterials((prev) => prev.filter((item) => item.bridgeProjectId !== projectId));
+        setBridgeEmployees((prev) => prev.filter((item) => item.bridgeProjectId !== projectId));
+        setBridgeFixedCosts((prev) => prev.filter((item) => item.bridgeProjectId !== projectId));
+        setDailyLogs((prev) => prev.filter((item) => item.bridgeProjectId !== projectId));
+        const deletedAt = nowIso();
+        await executeDbAction({
+            type: 'update',
+            table: 'bridge_projects',
+            payload: { deleted_at: deletedAt, client_updated_at: deletedAt },
+            match: { id: projectId }
+        }, { silentOffline: true });
+        const relatedTables = ['bridge_materials', 'bridge_employees', 'bridge_fixed_costs', 'bridge_daily_logs'];
+        for (const table of relatedTables) {
+            await executeDbAction({
+                type: 'update',
+                table,
+                payload: { deleted_at: deletedAt, client_updated_at: deletedAt },
+                match: { bridge_project_id: projectId }
+            }, { silentOffline: true });
+        }
+        addNotification('Projeto de ponte removido.', 'info');
+    };
     const handleAddBridgeMaterial = async (material) => {
         const obraId = inferCurrentObraId();
         if (!obraId)
             return;
+        const isEditing = !!material.id;
         const item = {
             ...material,
-            id: createUuid(),
-            totalValue: (Number(material.quantity || 0) * Number(material.unitPrice || 0)) + Number(material.freightValue || 0)
+            id: material.id || createUuid(),
+            taxValue: Number(material.taxValue || 0),
+            totalValue: (Number(material.quantity || 0) * Number(material.unitPrice || 0)) + Number(material.freightValue || 0) + Number(material.taxValue || 0)
         };
-        setBridgeMaterials((prev) => [item, ...prev]);
+        setBridgeMaterials((prev) => isEditing ? prev.map((entry) => entry.id === item.id ? item : entry) : [item, ...prev]);
         await executeDbAction({
             type: 'upsert',
             table: 'bridge_materials',
@@ -1629,10 +1886,14 @@ const App = () => {
                 unit: item.unit || null,
                 unit_price: Number(item.unitPrice || 0),
                 freight_value: Number(item.freightValue || 0),
+                tax_value: Number(item.taxValue || 0),
                 client_updated_at: nowIso()
             },
             onConflict: 'id'
         }, { silentOffline: true });
+    };
+    const handleUpdateBridgeMaterial = async (material) => {
+        await handleAddBridgeMaterial(material);
     };
     const handleDeleteBridgeMaterial = async (id) => {
         setBridgeMaterials((prev) => prev.filter((item) => item.id !== id));
@@ -1647,7 +1908,11 @@ const App = () => {
         const obraId = inferCurrentObraId();
         if (!obraId)
             return;
-        const item = { ...employee, id: createUuid() };
+        const item = {
+            ...employee,
+            id: createUuid(),
+            deBaixadaSince: employee.status === 'De Baixada' ? (employee.deBaixadaSince || todayStr()) : null
+        };
         setBridgeEmployees((prev) => [item, ...prev]);
         await executeDbAction({
             type: 'upsert',
@@ -1668,6 +1933,7 @@ const App = () => {
                 total_additional_cost: Number(item.totalAdditionalCost || 0),
                 severance_pending: !!item.severancePending,
                 termination_date: item.terminationDate || null,
+                de_baixada_since: item.deBaixadaSince || null,
                 client_updated_at: nowIso()
             },
             onConflict: 'id'
@@ -1682,25 +1948,32 @@ const App = () => {
             match: { id }
         }, { silentOffline: true });
     };
-    const handleUpdateBridgeEmployeeStatus = async (id, status, additionalCost, isPending) => {
-        setBridgeEmployees((prev) => prev.map((employee) => employee.id === id ? {
-            ...employee,
-            status,
-            totalAdditionalCost: Number(employee.totalAdditionalCost || 0) + Number(additionalCost || 0),
-            severancePending: !!isPending,
-            terminationDate: status === 'Demitido' ? todayStr() : employee.terminationDate
-        } : employee));
+    const handleUpdateBridgeEmployeeStatus = async (id, status, additionalCost, isPending, statusEffectiveDate) => {
         const target = bridgeEmployees.find((employee) => employee.id === id);
         if (!target)
             return;
+        const nextAdditionalCost = Number(target.totalAdditionalCost || 0) + Number(additionalCost || 0);
+        const nextTerminationDate = status === 'Demitido' ? (statusEffectiveDate || todayStr()) : target.terminationDate || null;
+        const nextDeBaixadaSince = status === 'De Baixada'
+            ? (statusEffectiveDate || target.deBaixadaSince || todayStr())
+            : (target.status === 'De Baixada' ? null : (target.deBaixadaSince || null));
+        setBridgeEmployees((prev) => prev.map((employee) => employee.id === id ? {
+            ...employee,
+            status,
+            totalAdditionalCost: nextAdditionalCost,
+            severancePending: !!isPending,
+            terminationDate: nextTerminationDate || undefined,
+            deBaixadaSince: nextDeBaixadaSince
+        } : employee));
         await executeDbAction({
             type: 'update',
             table: 'bridge_employees',
             payload: {
                 status,
-                total_additional_cost: Number(target.totalAdditionalCost || 0) + Number(additionalCost || 0),
+                total_additional_cost: nextAdditionalCost,
                 severance_pending: !!isPending,
-                termination_date: status === 'Demitido' ? todayStr() : target.terminationDate || null,
+                termination_date: nextTerminationDate,
+                de_baixada_since: nextDeBaixadaSince,
                 client_updated_at: nowIso()
             },
             match: { id }
@@ -1738,12 +2011,17 @@ const App = () => {
         const obraId = inferCurrentObraId();
         if (!obraId)
             return;
+        const existingLog = log.id ? dailyLogs.find((item) => item.id === log.id) : null;
+        const isEditing = !!existingLog;
         const item = {
             ...log,
-            id: createUuid(),
-            equipmentList: log.equipmentList || []
+            id: log.id || createUuid(),
+            equipmentList: normalizeListIds((log.equipmentList || []).map((equipment) => ({
+                ...equipment,
+                id: equipment.id || createUuid()
+            })))
         };
-        setDailyLogs((prev) => [item, ...prev]);
+        setDailyLogs((prev) => isEditing ? prev.map((entry) => entry.id === item.id ? item : entry) : [item, ...prev]);
         await executeDbAction({
             type: 'upsert',
             table: 'bridge_daily_logs',
@@ -1758,23 +2036,21 @@ const App = () => {
             },
             onConflict: 'id'
         }, { silentOffline: true });
-        const equipmentsPayload = (item.equipmentList || []).map((equipment) => ({
-            id: createUuid(),
-            obra_id: obraId,
-            daily_log_id: item.id,
-            equipment_id: machines.find((m) => m.prefix === equipment.prefix)?.id || null,
-            prefix: equipment.prefix,
-            daily_cost: Number(equipment.dailyCost || 0),
-            client_updated_at: nowIso()
-        }));
-        if (equipmentsPayload.length > 0) {
-            await executeDbAction({
-                type: 'upsert',
-                table: 'bridge_daily_log_equipments',
-                payload: equipmentsPayload,
-                onConflict: 'id'
-            }, { silentOffline: true });
-        }
+        await syncCollectionChanges({
+            table: 'bridge_daily_log_equipments',
+            previous: normalizeListIds(existingLog?.equipmentList || []),
+            next: item.equipmentList || [],
+            toPayload: (equipment) => ({
+                id: equipment.id,
+                obra_id: obraId,
+                daily_log_id: item.id,
+                equipment_id: machines.find((m) => m.prefix === equipment.prefix)?.id || null,
+                prefix: equipment.prefix,
+                daily_cost: Number(equipment.dailyCost || 0),
+                client_updated_at: nowIso()
+            }),
+            onConflict: 'id'
+        });
     };
     const invokeAdminUsersFunction = useCallback(async (payload) => {
         const supabase = getSupabaseClient();
@@ -1804,15 +2080,15 @@ const App = () => {
         setUsersSaving(true);
         try {
             const activeUsers = users.filter((item) => item.isActive !== false).length;
-            if (activeUsers >= 15) {
-                return { error: 'Limite de 15 usuarios ativos atingido.' };
+            if (activeUsers >= MAX_ACTIVE_USERS) {
+                return { error: `Limite de ${MAX_ACTIVE_USERS} usuarios ativos atingido.` };
             }
             await invokeAdminUsersFunction({
                 action: 'create',
                 email: payload.email,
                 password: payload.password,
                 name: payload.name,
-                username: payload.username,
+                username: payload.username || deriveUsernameFromEmail(payload.email),
                 role: payload.role,
                 allowedObraId: payload.allowedObraId,
                 permissions: payload.permissions || {},
@@ -1864,10 +2140,12 @@ const App = () => {
         try {
             const supabase = getSupabaseClient();
             const now = new Date().toISOString();
+            const targetUser = users.find((item) => item.id === userId);
+            const resolvedUsername = payload.username || targetUser?.username || deriveUsernameFromEmail(targetUser?.email || '');
             const profilePayload = {
                 id: userId,
                 full_name: payload.name,
-                username: payload.username,
+                username: resolvedUsername,
                 role: payload.role,
                 allowed_obra_id: payload.allowedObraId === 'all' ? null : payload.allowedObraId,
                 client_updated_at: now
@@ -1914,8 +2192,8 @@ const App = () => {
             const supabase = getSupabaseClient();
             const nextStatus = !targetUser.isActive;
             const activeUsers = users.filter((item) => item.isActive !== false).length;
-            if (nextStatus && activeUsers >= 15) {
-                return { error: 'Limite de 15 usuarios ativos atingido.' };
+            if (nextStatus && activeUsers >= MAX_ACTIVE_USERS) {
+                return { error: `Limite de ${MAX_ACTIVE_USERS} usuarios ativos atingido.` };
             }
             const { error } = await supabase
                 .from('profiles')
@@ -1950,8 +2228,6 @@ const App = () => {
             return 'viewUsina';
         if (view === 'Banco de Dados')
             return 'editBancoDados';
-        if (view === 'Relatorios')
-            return 'viewRelatorios';
         if (view === 'Configuracoes')
             return 'editConfiguracoes';
         return null;
@@ -2020,14 +2296,13 @@ const App = () => {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <Header toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} obras={obras} selectedObraId={selectedObraId} onSelectObra={setSelectedObraId} user={user} notifications={notifications} onClearNotifications={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))} onNotificationClick={(n) => { }}/>
             <main className="flex-1 overflow-x-hidden overflow-y-auto bg-brand-primary p-4 md:p-6">
-                {activeView === 'Dashboard' && (<DashboardView machines={machines} machinesWithIssues={machines.filter(m => m.pendingIssues && m.pendingIssues.length > 0)} maintenanceTasks={maintenanceTasks} bridgeMaterials={bridgeMaterials} bridgeEmployees={bridgeEmployees} bridgeEvents={bridgeEvents} bridgeMaterialRequests={bridgeMaterialRequests} dailyLogs={dailyLogs} bridgeProjects={bridgeProjects} usinaDeliveries={usinaDeliveries} usinaBituminous={usinaBitu} usinaProduction={usinaProd} usinaLoads={usinaLoads} fuelRecords={fuelRecords} dieselDeliveries={dieselDeliveries} onAddHorimetro={(m) => { setSelectedMachine(m); setHorimetroModalOpen(true); }} onSelectMachine={setSelectedMachineDetail} onOpenMaintenanceModal={() => setMaintenanceModalOpen(true)} onAddMachineToDashboard={(id) => setDashboardMachineIds(prev => [...prev, id])} onRemoveMachineFromDashboard={(id) => setDashboardMachineIds(prev => prev.filter(x => x !== id))} onUpdateMachineStatus={handleUpdateStatus} availableMachinesToAdd={[]} workedHoursThisMonth={workedHoursThisMonth} totalStoppedHoursForYear={totalStoppedHoursForYear} dashboardMachineIds={dashboardMachineIds} onResolveIssue={handleResolveIssue}/>)}
+                {activeView === 'Dashboard' && (<DashboardView machines={machines} machinesWithIssues={machines.filter(m => m.pendingIssues && m.pendingIssues.length > 0)} maintenanceTasks={maintenanceTasks} bridgeMaterials={bridgeMaterials} bridgeEmployees={bridgeEmployees} bridgeEvents={bridgeEvents} bridgeMaterialRequests={bridgeMaterialRequests} dailyLogs={dailyLogs} bridgeProjects={bridgeProjects} usinaDeliveries={usinaDeliveries} usinaBituminous={usinaBitu} usinaProduction={usinaProd} usinaLoads={usinaLoads} fuelRecords={fuelRecords} dieselDeliveries={dieselDeliveries} notifications={notifications} onAddHorimetro={(m) => { setSelectedMachine(m); setHorimetroModalOpen(true); }} onSelectMachine={setSelectedMachineDetail} onOpenMaintenanceModal={() => setMaintenanceModalOpen(true)} onAddMachineToDashboard={(id) => setDashboardMachineIds(prev => [...prev, id])} onRemoveMachineFromDashboard={(id) => setDashboardMachineIds(prev => prev.filter(x => x !== id))} onUpdateMachineStatus={handleUpdateStatus} availableMachinesToAdd={[]} workedHoursThisMonth={workedHoursThisMonth} totalStoppedHoursForYear={totalStoppedHoursForYear} dashboardMachineIds={dashboardMachineIds} onResolveIssue={handleResolveIssue}/>)}
                 {activeView === 'Em Campo' && (<EmCampoView machines={machines} maintenanceTasks={maintenanceTasks} onAddHorimetro={(m) => { setSelectedMachine(m); setHorimetroModalOpen(true); }} onSelectMachine={setSelectedMachineDetail} onAddMachineToDashboard={() => { }} onRemoveMachineFromDashboard={() => { }} onUpdateMachineStatus={handleUpdateStatus} availableMachinesToAdd={[]} dashboardMachineIds={[]}/>)}
                 {activeView === 'Abastecimentos' && (<AbastecimentosView machines={machines} maintenanceTasks={maintenanceTasks} records={fuelRecords} setRecords={handleSetFuelRecords} dieselDeliveries={dieselDeliveries} setDieselDeliveries={handleSetDieselDeliveries} onAddHorimetro={(m) => { setSelectedMachine(m); setHorimetroModalOpen(true); }} onSelectMachine={setSelectedMachineDetail} onUpdateMachineStatus={handleUpdateStatus} onSyncMachineHours={handleSyncMachineHours}/>)}
-                {activeView === 'Oficina' && (<OficinaView machines={machines.filter(m => m.status === MachineStatus.Maintenance || m.status === MachineStatus.MechanicalProblem)} allMachines={machines} maintenanceTasks={maintenanceTasks} onSelectMachine={setSelectedMachineDetail} onUpdateMachineStatus={handleUpdateStatus} onOpenOficinaEditModal={(m) => { setSelectedMachine(m); setOficinaEditModalOpen(true); }} onResolveIssue={handleResolveIssue} onOpenMaintenanceModal={() => setMaintenanceModalOpen(true)}/>)}
-                {activeView === 'Pontes' && (<PontesView currentObraId={selectedObraId} projects={bridgeProjects} materials={bridgeMaterials} withdrawals={bridgeWithdrawals} employees={bridgeEmployees} fixedCosts={bridgeFixedCosts} events={bridgeEvents} services={bridgeServices} machines={machines} dailyLogs={dailyLogs} workers={workers} onAddProject={handleAddBridgeProject} onAddMaterial={handleAddBridgeMaterial} onDeleteMaterial={handleDeleteBridgeMaterial} onAddEmployee={handleAddBridgeEmployee} onEditEmployee={() => { }} onDeleteEmployee={handleDeleteBridgeEmployee} onUpdateEmployeeStatus={handleUpdateBridgeEmployeeStatus} onSaveFixedCosts={handleSaveBridgeFixedCosts} onSaveDailyLog={handleSaveBridgeDailyLog}/>)}
+                {activeView === 'Oficina' && (<OficinaView machines={machines.filter(m => m.status === MachineStatus.Maintenance || m.status === MachineStatus.MechanicalProblem)} allMachines={machines} maintenanceTasks={maintenanceTasks} notifications={notifications} onSelectMachine={setSelectedMachineDetail} onUpdateMachineStatus={handleUpdateStatus} onOpenOficinaEditModal={(m) => { setSelectedMachine(m); setOficinaEditModalOpen(true); }} onResolveIssue={handleResolveIssue} onOpenMaintenanceModal={() => setMaintenanceModalOpen(true)}/>)}
+                {activeView === 'Pontes' && (<PontesView currentObraId={selectedObraId} projects={bridgeProjects} materials={bridgeMaterials} withdrawals={bridgeWithdrawals} employees={bridgeEmployees} fixedCosts={bridgeFixedCosts} events={bridgeEvents} services={bridgeServices} machines={machines} dailyLogs={dailyLogs} workers={workers} onAddProject={handleAddBridgeProject} onDeleteProject={handleDeleteBridgeProject} onAddMaterial={handleAddBridgeMaterial} onUpdateMaterial={handleUpdateBridgeMaterial} onDeleteMaterial={handleDeleteBridgeMaterial} onAddEmployee={handleAddBridgeEmployee} onEditEmployee={() => { }} onDeleteEmployee={handleDeleteBridgeEmployee} onUpdateEmployeeStatus={handleUpdateBridgeEmployeeStatus} onSaveFixedCosts={handleSaveBridgeFixedCosts} onSaveDailyLog={handleSaveBridgeDailyLog}/>)}
                 {activeView === 'Usina' && (<UsinaView machines={machines} deliveries={usinaDeliveries} setDeliveries={handleSetUsinaDeliveries} bituDeliveries={usinaBitu} setBituDeliveries={handleSetUsinaBitu} productionLogs={usinaProd} setProductionLogs={handleSetUsinaProd} loadEntries={usinaLoads} setLoadEntries={handleSetUsinaLoads} tankCapacities={bituTankCapacities} setTankCapacities={handleSetBituTankCapacities}/>)}
                 {activeView === 'Banco de Dados' && (<DatabaseView machines={machines} obras={obras} workers={workers} onAddMachine={() => { setSelectedMachine(null); setMachineModalOpen(true); }} onEditMachine={(m) => { setSelectedMachine(m); setMachineModalOpen(true); }} onDeleteMachine={handleDeleteMachine} onAddWorker={() => { setEditingWorker(null); setWorkerModalOpen(true); }} onEditWorker={(w) => { setEditingWorker(w); setWorkerModalOpen(true); }} onDeleteWorker={handleDeleteWorker} onAddObra={() => { setEditingObra(null); setObraModalOpen(true); }} onEditObra={(o) => { setEditingObra(o); setObraModalOpen(true); }} onDeleteObra={handleDeleteObra}/>)}
-                {activeView === 'Relatorios' && <RelatoriosView machines={machines} maintenanceTasks={maintenanceTasks}/>}
                 {activeView === 'Configuracoes' && (<ConfiguracoesView users={users} obras={obras} currentUserId={user.id} isLoading={usersLoading} isSaving={usersSaving} onRefreshUsers={fetchUsers} onSaveUser={handleSaveUserConfig} onCreateUser={handleCreateUserConfig} onDeleteUser={handleDeleteUserConfig} onToggleUserStatus={handleToggleUserStatus} notificationSoundEnabled={notificationSoundEnabled} onToggleNotificationSound={setNotificationSoundEnabled}/>)}
             </main>
         </div>

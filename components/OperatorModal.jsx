@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 const OperatorModal = ({ isOpen, onClose, onSave, workerToEdit, machines }) => {
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
     const [machineId, setMachineId] = useState('');
+    const wasOpenRef = useRef(false);
     // Sort machines for dropdown
     const sortedMachines = useMemo(() => {
         return [...machines].sort((a, b) => a.prefix.localeCompare(b.prefix));
     }, [machines]);
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !wasOpenRef.current) {
             if (workerToEdit) {
                 setName(workerToEdit.name);
                 setRole(workerToEdit.role);
@@ -20,6 +21,7 @@ const OperatorModal = ({ isOpen, onClose, onSave, workerToEdit, machines }) => {
                 setMachineId('');
             }
         }
+        wasOpenRef.current = isOpen;
     }, [isOpen, workerToEdit]);
     if (!isOpen)
         return null;
@@ -27,12 +29,7 @@ const OperatorModal = ({ isOpen, onClose, onSave, workerToEdit, machines }) => {
         e.preventDefault();
         onSave({ name, role, machineId: machineId || undefined }, workerToEdit?.id);
     };
-    const handleOverlayClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    };
-    return (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity" onClick={handleOverlayClick} aria-modal="true" role="dialog">
+    return (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity" aria-modal="true" role="dialog">
       <div className="bg-brand-secondary rounded-lg shadow-xl p-6 w-full max-w-md m-4">
         <h2 className="text-xl font-bold text-brand-light mb-4">
           {workerToEdit ? 'Editar Trabalhador' : 'Adicionar Trabalhador'}

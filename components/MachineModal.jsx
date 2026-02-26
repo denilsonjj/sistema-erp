@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 const MachineModal = ({ isOpen, onClose, onSave, machineToEdit, obras, selectedObraId }) => {
     const [formData, setFormData] = useState({
         prefix: '',
@@ -9,8 +9,9 @@ const MachineModal = ({ isOpen, onClose, onSave, machineToEdit, obras, selectedO
         obraId: selectedObraId,
         hours: 0,
     });
+    const wasOpenRef = useRef(false);
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !wasOpenRef.current) {
             if (machineToEdit) {
                 setFormData({
                     prefix: machineToEdit.prefix,
@@ -34,6 +35,7 @@ const MachineModal = ({ isOpen, onClose, onSave, machineToEdit, obras, selectedO
                 });
             }
         }
+        wasOpenRef.current = isOpen;
     }, [machineToEdit, isOpen, selectedObraId]);
     if (!isOpen)
         return null;
@@ -48,12 +50,7 @@ const MachineModal = ({ isOpen, onClose, onSave, machineToEdit, obras, selectedO
         e.preventDefault();
         onSave(formData, machineToEdit?.id);
     };
-    const handleOverlayClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    };
-    return (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity" onClick={handleOverlayClick} aria-modal="true" role="dialog">
+    return (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity" aria-modal="true" role="dialog">
       <div className="bg-brand-secondary rounded-lg shadow-xl p-6 w-full max-w-lg m-4">
         <h2 className="text-xl font-bold text-brand-light mb-4">
           {machineToEdit ? 'Editar Máquina' : 'Adicionar Nova Máquina'}

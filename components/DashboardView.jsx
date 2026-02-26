@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useState, useMemo, useEffect } from 'react';
 import { MachineStatus } from '../types';
 import MetricCard from './MetricCard';
-import MachineStatusChart from './MachineStatusChart';
 import OficinaSummary from './MaintenanceSchedule';
 import WorkshopActivityTimeline from './WorkshopActivityTimeline';
 import MachineList from './MachineList';
@@ -66,12 +65,17 @@ const calculateHoursStopped = (statusChangeDate, lastStatusChangeTime) => {
     return Math.floor(calculateWorkingHours(statusChangeDate, lastStatusChangeTime));
 };
 const calculateDurationString = (statusChangeDate, lastStatusChangeTime) => {
-    const totalHours = calculateWorkingHours(statusChangeDate, lastStatusChangeTime);
-    const days = Math.floor(totalHours / 9);
-    const hours = Math.floor(totalHours % 9);
+    const totalMinutes = Math.max(0, Math.floor(calculateWorkingHours(statusChangeDate, lastStatusChangeTime) * 60));
+    const minutesPerWorkday = 9 * 60;
+    const days = Math.floor(totalMinutes / minutesPerWorkday);
+    const remainingMinutes = totalMinutes - (days * minutesPerWorkday);
+    const hours = Math.floor(remainingMinutes / 60);
+    const minutes = remainingMinutes % 60;
     if (days > 0)
         return `${days}d ${hours}h`;
-    return `${hours}h`;
+    if (hours > 0)
+        return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
 };
 const calculateDaysStopped = (statusChangeDate, lastStatusChangeTime) => {
     const totalHours = calculateWorkingHours(statusChangeDate, lastStatusChangeTime || '00:00');
@@ -83,6 +87,50 @@ const getDaysWorked = (startStr, terminationDate) => {
     const end = terminationDate ? new Date(terminationDate + 'T00:00:00') : new Date();
     const diff = end.getTime() - start.getTime();
     return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)) + 1);
+};
+const getInclusiveDaysInRange = (startDateStr, endDateStr) => {
+    if (!startDateStr || !endDateStr)
+        return 0;
+    const normalize = (value) => {
+        const raw = String(value || '').trim();
+        const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (brMatch) {
+            return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+        }
+        return raw;
+    };
+    const start = new Date(normalize(startDateStr) + 'T00:00:00');
+    const end = new Date(normalize(endDateStr) + 'T00:00:00');
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start)
+        return 0;
+    const diff = end.getTime() - start.getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+};
+const calculateFoodChargeDays = (employee, rangeStartStr, rangeEndStr) => {
+    const start = rangeStartStr || employee.startDate;
+    const end = rangeEndStr || employee.terminationDate || new Date().toISOString().split('T')[0];
+    const totalDays = getInclusiveDaysInRange(start, end);
+    if (totalDays <= 0)
+        return 0;
+    if (!employee.deBaixadaSince) {
+        return totalDays;
+    }
+    const startTs = new Date(start + 'T00:00:00').getTime();
+    const endTs = new Date(end + 'T00:00:00').getTime();
+    const baixadaTs = new Date(String(employee.deBaixadaSince).replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3-$2-$1') + 'T00:00:00').getTime();
+    if (Number.isNaN(startTs) || Number.isNaN(endTs) || Number.isNaN(baixadaTs)) {
+        return totalDays;
+    }
+    if (baixadaTs <= startTs) {
+        return 0;
+    }
+    if (baixadaTs > endTs) {
+        return totalDays;
+    }
+    const foodEndDate = new Date(baixadaTs);
+    foodEndDate.setDate(foodEndDate.getDate() - 1);
+    const safeEnd = foodEndDate.toISOString().split('T')[0];
+    return getInclusiveDaysInRange(start, safeEnd);
 };
 const BituVisualTank3D = ({ label, current, capacity }) => {
     const percentage = Math.max(0, Math.min(100, (current / (capacity || 1)) * 100));
@@ -149,9 +197,9 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
             daysInRange = Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
         }
         const dailySalary = emp.salary / 30;
-        const hasFoodCost = emp.status !== 'De Baixada' && emp.status !== 'Demitido';
-        const dailyFood = hasFoodCost ? (emp.breakfastCost || 0) + (emp.lunchCost || 0) + (emp.dinnerCost || 0) : 0;
-        const totalCost = (daysInRange * (dailySalary + dailyFood)) + (emp.totalAdditionalCost || 0);
+        const dailyFood = (emp.breakfastCost || 0) + (emp.lunchCost || 0) + (emp.dinnerCost || 0);
+        const foodDays = calculateFoodChargeDays(emp, startDate, endDate);
+        const totalCost = (daysInRange * dailySalary) + (foodDays * dailyFood) + (emp.totalAdditionalCost || 0);
         return { ...emp, daysInRange, totalCost };
     }).filter(e => e.daysInRange > 0 || e.totalAdditionalCost > 0);
     const totalLabor = laborDetails.reduce((acc, emp) => acc + emp.totalCost, 0);
@@ -159,16 +207,16 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
     const generatePDF = () => {
         const doc = new jsPDF();
         doc.setFontSize(18);
-        doc.text("Relatório de Custos - Obra de Arte Especial", 14, 20);
+        doc.text("RelatÃ³rio de Custos - Obra de Arte Especial", 14, 20);
         doc.setFontSize(10);
         doc.text(`Projeto: ${project.name}`, 14, 28);
-        doc.text(`Período: ${new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 34);
+        doc.text(`PerÃ­odo: ${new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 34);
         autoTable(doc, {
             startY: 40,
             head: [['Categoria', 'Custo Total (R$)']],
             body: [
                 ['Materiais', formatCurrency(totalMaterials)],
-                ['Mão de Obra', formatCurrency(totalLabor)],
+                ['MÃ£o de Obra', formatCurrency(totalLabor)],
                 ['Equipamentos', formatCurrency(totalEquipment)],
                 ['TOTAL GERAL', formatCurrency(totalGeneral)]
             ],
@@ -199,7 +247,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
         });
         autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 12,
-            head: [['Data', 'Equipamento', 'Custo Diária']],
+            head: [['Data', 'Equipamento', 'Custo DiÃ¡ria']],
             body: equipRows,
             styles: { fontSize: 8 }
         });
@@ -210,7 +258,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
                 <div className="bg-slate-100 p-4 border-b flex justify-between items-center shrink-0">
                     <div>
                         <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <PrinterIcon className="w-6 h-6 text-brand-logo"/> Relatório Financeiro do Projeto
+                            <PrinterIcon className="w-6 h-6 text-brand-logo"/> RelatÃ³rio Financeiro do Projeto
                         </h2>
                         <p className="text-xs text-slate-500 uppercase tracking-widest">{project.name}</p>
                     </div>
@@ -219,7 +267,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
 
                 <div className="bg-white p-4 border-b flex flex-wrap gap-4 items-center shrink-0">
                     <div className="flex flex-col">
-                        <label className="text-[10px] uppercase font-bold text-slate-400">Início</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-400">InÃ­cio</label>
                         <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="border rounded p-1 text-sm text-slate-700 font-bold"/>
                     </div>
                     <div className="flex flex-col">
@@ -237,12 +285,12 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
                     <div className="bg-white shadow-sm border p-8 min-h-[800px] max-w-3xl mx-auto">
                         <div className="border-b-2 border-slate-800 pb-4 mb-8 flex justify-between items-end">
                             <div>
-                                <h1 className="text-2xl font-black uppercase text-slate-900">Relatório de Custos</h1>
+                                <h1 className="text-2xl font-black uppercase text-slate-900">RelatÃ³rio de Custos</h1>
                                 <p className="text-sm font-medium text-slate-500">{project.name}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Período</p>
-                                <p className="text-sm font-bold text-slate-800">{new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase">PerÃ­odo</p>
+                                <p className="text-sm font-bold text-slate-800">{new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} atÃ© {new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                             </div>
                         </div>
 
@@ -252,7 +300,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
                                 <span className="text-lg font-bold text-green-600">{formatCurrency(totalMaterials)}</span>
                             </div>
                             <div className="bg-slate-100 p-3 rounded border">
-                                <span className="text-[9px] uppercase font-bold text-slate-400 block">Mão de Obra</span>
+                                <span className="text-[9px] uppercase font-bold text-slate-400 block">MÃ£o de Obra</span>
                                 <span className="text-lg font-bold text-blue-600">{formatCurrency(totalLabor)}</span>
                             </div>
                             <div className="bg-slate-100 p-3 rounded border">
@@ -270,13 +318,13 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
                             <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Data</th><th className="p-2">Material</th><th className="p-2 text-right">Valor Total</th></tr></thead>
                             <tbody>
                                 {filteredMaterials.map(m => (<tr key={m.id} className="border-b border-slate-100"><td className="p-2">{new Date(m.receiptDate + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td className="p-2">{m.material} <span className="text-slate-400">({m.quantity}{m.unit})</span></td><td className="p-2 text-right font-mono">{formatCurrency(m.totalValue)}</td></tr>))}
-                                {filteredMaterials.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros no período.</td></tr>}
+                                {filteredMaterials.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros no perÃ­odo.</td></tr>}
                             </tbody>
                         </table>
 
-                        <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">Mão de Obra (Proporcional ao Período)</h3>
+                        <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">MÃ£o de Obra (Proporcional ao PerÃ­odo)</h3>
                         <table className="w-full text-xs text-left mb-8 border-collapse">
-                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Colaborador</th><th className="p-2 text-center">Dias no Período</th><th className="p-2 text-right">Custo Apróx.</th></tr></thead>
+                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Colaborador</th><th className="p-2 text-center">Dias no PerÃ­odo</th><th className="p-2 text-right">Custo AprÃ³x.</th></tr></thead>
                             <tbody>
                                 {laborDetails.map(emp => (<tr key={emp.id} className="border-b border-slate-100"><td className="p-2">{emp.name} <span className="text-slate-400">({emp.role})</span></td><td className="p-2 text-center">{emp.daysInRange}</td><td className="p-2 text-right font-mono">{formatCurrency(emp.totalCost)}</td></tr>))}
                             </tbody>
@@ -284,14 +332,14 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
 
                         <h3 className="text-xs font-black uppercase border-b mb-3 pb-1 mt-8">Apontamento de Equipamentos</h3>
                         <table className="w-full text-xs text-left mb-8 border-collapse">
-                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Data</th><th className="p-2">Equipamento</th><th className="p-2 text-right">Custo Diária</th></tr></thead>
+                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Data</th><th className="p-2">Equipamento</th><th className="p-2 text-right">Custo DiÃ¡ria</th></tr></thead>
                             <tbody>
                                 {equipmentDetails.map((item, idx) => (<tr key={idx} className="border-b border-slate-100">
                                         <td className="p-2">{new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                                         <td className="p-2">{item.prefix}</td>
                                         <td className="p-2 text-right font-mono">{formatCurrency(item.cost)}</td>
                                     </tr>))}
-                                {equipmentDetails.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros de equipamentos no período.</td></tr>}
+                                {equipmentDetails.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros de equipamentos no perÃ­odo.</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -300,7 +348,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
         </div>);
 };
 const CRITICAL_LEVEL = 3000;
-const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines = [], maintenanceTasks, bridgeMaterials, bridgeEmployees, bridgeEvents, bridgeMaterialRequests, dailyLogs = [], bridgeProjects = [], usinaDeliveries = [], usinaBituminous = [], usinaProduction = [], usinaLoads = [], usinaTankCapacities = { 'CAP': 60, 'EAI': 30, 'RR-2C': 30, 'RR-1C': 30 }, fuelRecords = [], dieselDeliveries = [], onAddHorimetro, onSelectMachine, onOpenMaintenanceModal, onAddMachineToDashboard, onRemoveMachineFromDashboard, onUpdateMachineStatus, availableMachinesToAdd, workedHoursThisMonth, totalStoppedHoursForYear, dashboardMachineIds, onResolveIssue }) => {
+const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines = [], maintenanceTasks, bridgeMaterials, bridgeEmployees, bridgeEvents, bridgeMaterialRequests, dailyLogs = [], bridgeProjects = [], usinaDeliveries = [], usinaBituminous = [], usinaProduction = [], usinaLoads = [], usinaTankCapacities = { 'CAP': 60, 'EAI': 30, 'RR-2C': 30, 'RR-1C': 30 }, fuelRecords = [], dieselDeliveries = [], notifications = [], onAddHorimetro, onSelectMachine, onOpenMaintenanceModal, onAddMachineToDashboard, onRemoveMachineFromDashboard, onUpdateMachineStatus, availableMachinesToAdd, workedHoursThisMonth, totalStoppedHoursForYear, dashboardMachineIds, onResolveIssue }) => {
     const [activeTab, setActiveTab] = useState('Oficina');
     const [showCostDetails, setShowCostDetails] = useState(false);
     const [showTopConsumersModal, setShowTopConsumersModal] = useState(false);
@@ -318,13 +366,20 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
     const [filterEquipment, setFilterEquipment] = useState('all');
     // NOVO ESTADO: DATA SELECIONADA NA USINA
     const [selectedUsinaDate, setSelectedUsinaDate] = useState('');
+    const [downtimeClockTick, setDowntimeClockTick] = useState(() => Date.now());
     // EFFECTS
     useEffect(() => {
         if (bridgeProjects.length > 0 && !selectedBridgeProjectId) {
             setSelectedBridgeProjectId(bridgeProjects[0].id);
         }
     }, [bridgeProjects, selectedBridgeProjectId]);
-    // CÁLCULOS OFICINA
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            setDowntimeClockTick(Date.now());
+        }, 60000);
+        return () => window.clearInterval(intervalId);
+    }, []);
+    // CÃLCULOS OFICINA
     const workshopMetrics = useMemo(() => {
         const totalFleetCount = machines.length;
         const operatingMachines = machines.filter(m => m.status === MachineStatus.Operating).length;
@@ -332,11 +387,11 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
         const totalHoursParada = stoppedMachines.reduce((acc, m) => acc + calculateHoursStopped(m.statusChangeDate, m.lastStatusChangeTime), 0);
         const avgHoursParada = stoppedMachines.length > 0 ? totalHoursParada / stoppedMachines.length : 0;
         return { operatingMachines, totalFleetCount, totalHoursParada, avgHoursParada };
-    }, [machines]);
+    }, [machines, downtimeClockTick]);
     const stoppedMachines = useMemo(() => {
         return machines.filter(m => m.status === MachineStatus.Maintenance || m.status === MachineStatus.MechanicalProblem)
             .sort((a, b) => calculateDaysStopped(b.statusChangeDate, b.lastStatusChangeTime) - calculateDaysStopped(a.statusChangeDate, a.lastStatusChangeTime));
-    }, [machines]);
+    }, [machines, downtimeClockTick]);
     // Abastecimento logic
     const tankCapacity = 15000;
     const inventoryStats = useMemo(() => {
@@ -422,8 +477,8 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
             const days = getDaysWorked(curr.startDate, curr.terminationDate);
             const dailyRate = curr.salary / 30;
             const basic = dailyRate * days;
-            const shouldCountFood = curr.status !== 'De Baixada' && curr.status !== 'Demitido';
-            const food = shouldCountFood ? ((curr.breakfastCost || 0) + (curr.lunchCost || 0) + (curr.dinnerCost || 0)) * days : 0;
+            const foodDays = calculateFoodChargeDays(curr, curr.startDate, curr.terminationDate || new Date().toISOString().split('T')[0]);
+            const food = ((curr.breakfastCost || 0) + (curr.lunchCost || 0) + (curr.dinnerCost || 0)) * foodDays;
             return acc + basic + (curr.totalAdditionalCost || 0) + food;
         }, 0);
         const equipCost = projLogs.reduce((acc, log) => acc + log.equipmentList.reduce((dayAcc, eq) => dayAcc + (eq.dailyCost || 0), 0), 0);
@@ -479,9 +534,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
     const generateOficinaPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
         doc.setFontSize(18);
-        doc.text("Relatório - Gestão do Pátio (Oficina)", 14, 20);
+        doc.text("RelatÃ³rio - GestÃ£o do PÃ¡tio (Oficina)", 14, 20);
         doc.setFontSize(10);
-        doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 26);
+        doc.text(`Data de GeraÃ§Ã£o: ${new Date().toLocaleDateString('pt-BR')} Ã s ${new Date().toLocaleTimeString('pt-BR')}`, 14, 26);
         const tableBody = stoppedMachines.map(m => {
             const durationString = calculateDurationString(m.statusChangeDate, m.lastStatusChangeTime);
             return [
@@ -497,7 +552,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
         });
         autoTable(doc, {
             startY: 32,
-            head: [['Prefixo', 'Equipamento', 'Data Paralisação', 'Motivo', 'Situação', 'Responsável', 'Tempo Pátio (Útil)', 'Previsão Saída']],
+            head: [['Prefixo', 'Equipamento', 'Data ParalisaÃ§Ã£o', 'Motivo', 'SituaÃ§Ã£o', 'ResponsÃ¡vel', 'Tempo PÃ¡tio (Ãštil)', 'PrevisÃ£o SaÃ­da']],
             body: tableBody,
             styles: { fontSize: 9, cellPadding: 3 },
             headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -524,15 +579,15 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
     const generateAbastecimentoPDF = () => {
         const doc = new jsPDF();
         doc.setFontSize(18);
-        doc.text("Relatório de Controle de Abastecimento", 14, 20);
+        doc.text("RelatÃ³rio de Controle de Abastecimento", 14, 20);
         doc.setFontSize(10);
-        doc.text(`Período: ${new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} até ${new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 28);
+        doc.text(`PerÃ­odo: ${new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} atÃ© ${new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 28);
         const totalConsumedInRange = filteredRecords.reduce((acc, r) => acc + (parseFloat(r.diesel) || 0), 0);
         doc.setFontSize(12);
-        doc.text("Resumo do Período", 14, 40);
+        doc.text("Resumo do PerÃ­odo", 14, 40);
         autoTable(doc, {
             startY: 42,
-            head: [['Nível Atual Tanque', 'Entradas (Total)', 'Consumo no Período', 'Total Registros']],
+            head: [['NÃ­vel Atual Tanque', 'Entradas (Total)', 'Consumo no PerÃ­odo', 'Total Registros']],
             body: [[
                     `${inventoryStats.currentLevel.toLocaleString('pt-BR')} L`,
                     `${inventoryStats.totalIn.toLocaleString('pt-BR')} L`,
@@ -552,7 +607,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
         ]);
         autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 12,
-            head: [['Data', 'Prefixo', 'Equipamento', 'Volume', 'Horímetro']],
+            head: [['Data', 'Prefixo', 'Equipamento', 'Volume', 'HorÃ­metro']],
             body: tableBody,
             styles: { fontSize: 9 },
             headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
@@ -572,27 +627,30 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
             {/* Top Metrics Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard title="Equipamentos Operando" value={`${workshopMetrics.operatingMachines} / ${workshopMetrics.totalFleetCount}`} icon={<GraderIcon className="w-8 h-8"/>} color="text-green-400"/>
-                <MetricCard title="Somatório de tempo na oficina" value={`${workshopMetrics.totalHoursParada.toLocaleString('pt-BR')} h`} icon={<WrenchIcon className="w-8 h-8"/>} color="text-red-400"/>
-                <MetricCard title="Perm. Média (h)" value={`${workshopMetrics.avgHoursParada.toFixed(0)} h`} icon={<ClockIcon className="w-8 h-8"/>} color="text-blue-400"/>
-                <MetricCard title="Horas Trab. (Mês)" value={`${workedHoursThisMonth.toLocaleString('pt-BR')} h`} icon={<ChartIcon className="w-8 h-8"/>} color="text-indigo-400"/>
+                <MetricCard title="SomatÃ³rio de tempo na oficina" value={`${workshopMetrics.totalHoursParada.toLocaleString('pt-BR')} h`} icon={<WrenchIcon className="w-8 h-8"/>} color="text-red-400"/>
+                <MetricCard title="Perm. MÃ©dia (h)" value={`${workshopMetrics.avgHoursParada.toFixed(0)} h`} icon={<ClockIcon className="w-8 h-8"/>} color="text-blue-400"/>
+                <MetricCard title="Horas Trab. (MÃªs)" value={`${workedHoursThisMonth.toLocaleString('pt-BR')} h`} icon={<ChartIcon className="w-8 h-8"/>} color="text-indigo-400"/>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-5 bg-brand-secondary p-6 rounded-lg shadow-lg"><h3 className="text-sm font-bold text-brand-muted uppercase mb-4 tracking-widest">Distribuição por Status</h3><MachineStatusChart data={machines}/></div>
-                <div className="lg:col-span-7 bg-brand-secondary p-6 rounded-lg shadow-lg flex flex-col"><h3 className="text-sm font-bold text-brand-muted uppercase mb-4 tracking-widest">Gestão do Pátio (Atual)</h3><OficinaSummary machines={stoppedMachines} maintenanceTasks={maintenanceTasks} recentlyReleasedMachines={recentlyReleasedMachines}/></div>
+            <div className="bg-brand-secondary p-6 rounded-lg shadow-lg flex flex-col">
+                <h3 className="text-sm font-bold text-brand-muted uppercase mb-4 tracking-widest">Gestão do Pátio (Atual)</h3>
+                <OficinaSummary machines={stoppedMachines} maintenanceTasks={maintenanceTasks} recentlyReleasedMachines={recentlyReleasedMachines}/>
             </div>
 
             <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-red-500">
-                <h3 className="text-lg font-black text-brand-light uppercase mb-6 flex items-center gap-2 tracking-tighter"><ClockIcon className="w-6 h-6 text-red-400"/> Ranking Downtime (Permanência no Pátio)</h3>
-                {stoppedMachines.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <h3 className="text-lg font-black text-brand-light uppercase mb-6 flex items-center gap-2 tracking-tighter"><ClockIcon className="w-6 h-6 text-red-400"/> Ranking Downtime (PermanÃªncia no PÃ¡tio)</h3>
+                {stoppedMachines.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {stoppedMachines.map(m => {
                     const days = calculateDaysStopped(m.statusChangeDate, m.lastStatusChangeTime);
                     const durationString = calculateDurationString(m.statusChangeDate, m.lastStatusChangeTime);
+                    const fullMachineName = `${m.name || ''} ${m.model || ''}`.trim();
                     const percent = Math.min(100, (days / 30) * 100);
                     return (<div key={m.id} className="bg-brand-primary p-4 rounded-xl border border-slate-700/50 hover:border-red-500/30 transition-all group">
                                     <div className="flex justify-between items-center text-xs mb-3">
-                                        <div className="flex flex-col min-w-0"><span className="font-black text-brand-accent uppercase tracking-wider truncate">{m.prefix}</span><span className="text-brand-light font-bold truncate">{m.name}</span></div>
-                                        <div className="text-right shrink-0"><span className="font-black text-red-400 text-lg leading-none">{durationString}</span><span className="text-[9px] text-brand-muted uppercase block font-black">úteis</span></div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-black text-brand-accent uppercase tracking-wider break-words" title={m.prefix}>{m.prefix}</span>
+                                            <span className="text-brand-light font-bold text-[11px] leading-tight whitespace-normal break-words" title={fullMachineName}>{fullMachineName}</span>
+                                        </div>
+                                        <div className="text-right shrink-0"><span className="font-black text-red-400 text-lg leading-none">{durationString}</span><span className="text-[9px] text-brand-muted uppercase block font-black">Ãºteis</span></div>
                                     </div>
                                     <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden"><div className={`h-full transition-all duration-1000 ${days > 15 ? 'bg-red-500' : days > 7 ? 'bg-yellow-500' : 'bg-blue-500'}`} style={{ width: `${percent}%` }}></div></div>
                                 </div>);
@@ -602,11 +660,11 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
 
             <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-blue-500">
                 <h3 className="text-lg font-black text-brand-light uppercase mb-6 flex items-center gap-2 tracking-tighter"><HistoryIcon className="w-6 h-6 text-blue-500"/> Atividades Recentes da Oficina</h3>
-                <div className="w-full"><WorkshopActivityTimeline machines={machines} limit={15}/></div>
+                <div className="w-full"><WorkshopActivityTimeline machines={machines} limit={15} activityFeed={notifications}/></div>
             </div>
 
             <div className="bg-brand-secondary p-6 rounded-lg shadow-lg">
-                <h3 className="text-lg font-semibold text-brand-light mb-4">Visão Geral dos Equipamentos</h3>
+                <h3 className="text-lg font-semibold text-brand-light mb-4">VisÃ£o Geral dos Equipamentos</h3>
                 <MachineList machines={machines} maintenanceTasks={maintenanceTasks} viewMode="em_campo" availableMachinesToAdd={availableMachinesToAdd} onAddHorimetro={onAddHorimetro} onSelectMachine={onSelectMachine} onAddMachineToDashboard={onAddMachineToDashboard} onRemoveMachineFromDashboard={onRemoveMachineFromDashboard} onUpdateMachineStatus={onUpdateMachineStatus} dashboardMachineIds={dashboardMachineIds}/>
             </div>
 
@@ -614,13 +672,13 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                 <div>
                     <h3 className="text-lg font-bold text-brand-light flex items-center gap-2">
                         <PrinterIcon className="w-6 h-6 text-brand-accent"/>
-                        Relatório de Gestão de Pátio
+                        RelatÃ³rio de GestÃ£o de PÃ¡tio
                     </h3>
-                    <p className="text-sm text-brand-muted mt-1">Gere um documento PDF detalhado com os equipamentos parados, motivos e previsões de saída.</p>
+                    <p className="text-sm text-brand-muted mt-1">Gere um documento PDF detalhado com os equipamentos parados, motivos e previsÃµes de saÃ­da.</p>
                 </div>
                 <button onClick={() => setIsOficinaReportOpen(true)} className="bg-brand-primary hover:bg-slate-800 text-brand-light border border-slate-600 px-6 py-3 rounded-lg text-xs font-bold uppercase shadow-lg flex items-center gap-2 transition-all active:scale-95 whitespace-nowrap">
                     <PrinterIcon className="w-4 h-4 text-brand-accent"/>
-                    Visualizar Relatório (PDF)
+                    Visualizar RelatÃ³rio (PDF)
                 </button>
             </div>
 
@@ -629,9 +687,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                         <div className="bg-brand-primary p-4 border-b border-slate-600 flex justify-between items-center shrink-0">
                             <div>
                                 <h2 className="text-xl font-bold text-brand-light flex items-center gap-2">
-                                    <PrinterIcon className="w-6 h-6 text-brand-accent"/> Relatório de Equipamentos em Pátio
+                                    <PrinterIcon className="w-6 h-6 text-brand-accent"/> RelatÃ³rio de Equipamentos em PÃ¡tio
                                 </h2>
-                                <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">Pré-visualização de Documento</p>
+                                <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">PrÃ©-visualizaÃ§Ã£o de Documento</p>
                             </div>
                             <button onClick={() => setIsOficinaReportOpen(false)} className="text-brand-muted hover:text-brand-light p-2 rounded-full hover:bg-slate-700 transition-all"><XMarkIcon className="w-6 h-6"/></button>
                         </div>
@@ -639,11 +697,11 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                         <div className="flex-1 overflow-y-auto p-6 bg-white text-slate-800">
                             <div className="border-b-4 border-slate-800 pb-4 mb-6 flex justify-between items-end">
                                 <div>
-                                    <h1 className="text-2xl font-black uppercase text-slate-900">Relatório de Oficina</h1>
-                                    <p className="text-sm font-bold text-slate-500">Status do Pátio e Previsões</p>
+                                    <h1 className="text-2xl font-black uppercase text-slate-900">RelatÃ³rio de Oficina</h1>
+                                    <p className="text-sm font-bold text-slate-500">Status do PÃ¡tio e PrevisÃµes</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xs font-bold text-slate-400 uppercase">Data de Referência</p>
+                                    <p className="text-xs font-bold text-slate-400 uppercase">Data de ReferÃªncia</p>
                                     <p className="text-lg font-black text-slate-800">{new Date().toLocaleDateString('pt-BR')}</p>
                                 </div>
                             </div>
@@ -653,12 +711,12 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                     <tr>
                                         <th className="p-3 text-left">Prefixo</th>
                                         <th className="p-3 text-left">Equipamento</th>
-                                        <th className="p-3 text-center">Data Paralisação</th>
+                                        <th className="p-3 text-center">Data ParalisaÃ§Ã£o</th>
                                         <th className="p-3 text-left">Motivo</th>
-                                        <th className="p-3 text-left">Situação</th>
-                                        <th className="p-3 text-center">Responsável</th>
-                                        <th className="p-3 text-center">Tempo Pátio (Útil)</th>
-                                        <th className="p-3 text-center">Previsão</th>
+                                        <th className="p-3 text-left">SituaÃ§Ã£o</th>
+                                        <th className="p-3 text-center">ResponsÃ¡vel</th>
+                                        <th className="p-3 text-center">Tempo PÃ¡tio (Ãštil)</th>
+                                        <th className="p-3 text-center">PrevisÃ£o</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">
@@ -679,7 +737,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                                 </td>
                                                 <td className="p-3 text-center font-mono">{m.releaseForecastDate ? new Date(m.releaseForecastDate + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                                             </tr>);
-                }) : (<tr><td colSpan={8} className="p-8 text-center text-slate-400 italic font-bold">Nenhum equipamento no pátio.</td></tr>)}
+                }) : (<tr><td colSpan={8} className="p-8 text-center text-slate-400 italic font-bold">Nenhum equipamento no pÃ¡tio.</td></tr>)}
                                 </tbody>
                             </table>
                         </div>
@@ -698,7 +756,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   <div className="lg:col-span-4 bg-brand-secondary p-6 rounded-lg shadow-lg border border-slate-700 flex flex-col items-center relative">
                       <div className="flex justify-between items-center w-full mb-4">
-                          <h4 className="text-sm font-bold text-brand-muted uppercase text-center flex-1 ml-6">Nível do Tanque Principal</h4>
+                          <h4 className="text-sm font-bold text-brand-muted uppercase text-center flex-1 ml-6">NÃ­vel do Tanque Principal</h4>
                       </div>
 
                       <div className="relative w-32 h-64 bg-slate-800 rounded-3xl border-4 border-slate-600 overflow-hidden shadow-inner flex items-end">
@@ -709,7 +767,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                       </div>
                       <div className="mt-6 text-center">
                           <p className="text-2xl font-bold text-brand-light">{inventoryStats.currentLevel.toLocaleString('pt-BR')} L</p>
-                          <p className="text-xs text-brand-muted uppercase tracking-wider">Volume Disponível</p>
+                          <p className="text-xs text-brand-muted uppercase tracking-wider">Volume DisponÃ­vel</p>
                           {inventoryStats.currentLevel < CRITICAL_LEVEL && (<div className="mt-3 px-3 py-1 bg-red-500/20 border border-red-500/50 rounded-full animate-bounce">
                                   <span className="text-red-400 text-[10px] font-black uppercase">Fazer Novo Pedido</span>
                               </div>)}
@@ -727,7 +785,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                               <div className="flex items-center gap-2"><ArrowUpIcon className="w-5 h-5 text-green-400"/><span className="text-xl font-bold text-green-400">{inventoryStats.totalIn.toLocaleString('pt-BR')} L</span></div>
                           </div>
                           <div className="bg-brand-secondary p-4 rounded-lg border border-slate-700">
-                              <span className="text-[10px] text-brand-muted uppercase font-bold block mb-1">Saídas (Total)</span>
+                              <span className="text-[10px] text-brand-muted uppercase font-bold block mb-1">SaÃ­das (Total)</span>
                               <div className="flex items-center gap-2"><ArrowDownIcon className="w-5 h-5 text-red-400"/><span className="text-xl font-bold text-red-400">{inventoryStats.totalOut.toLocaleString('pt-BR')} L</span></div>
                           </div>
                       </div>
@@ -738,7 +796,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                           </div>
                           <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-48 overflow-y-auto">
                               <table className="min-w-full text-xs text-left text-brand-muted">
-                                  <thead className="bg-slate-800 text-brand-light uppercase sticky top-0"><tr><th className="px-4 py-2">Data</th><th className="px-4 py-2">Fornecedor</th><th className="px-4 py-2 text-right">Volume</th><th className="px-4 py-2 text-right">Preço Un.</th><th className="px-4 py-2 text-right">Total (R$)</th></tr></thead>
+                                  <thead className="bg-slate-800 text-brand-light uppercase sticky top-0"><tr><th className="px-4 py-2">Data</th><th className="px-4 py-2">Fornecedor</th><th className="px-4 py-2 text-right">Volume</th><th className="px-4 py-2 text-right">PreÃ§o Un.</th><th className="px-4 py-2 text-right">Total (R$)</th></tr></thead>
                                   <tbody className="divide-y divide-slate-700">
                                       {dieselDeliveries.map(del => (<tr key={del.id} className="hover:bg-slate-700/50">
                                               <td className="px-4 py-2">{new Date(del.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
@@ -758,14 +816,14 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   <div onClick={() => setShowCostDetails(true)} className="cursor-pointer transition-transform hover:scale-105 active:scale-95">
                     <MetricCard title="Custo Total" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fuelStats.totalSpent)} icon={<ChartIcon className="w-8 h-8"/>} color="text-green-400"/>
                   </div>
-                  <MetricCard title="Consumo (Mês)" value={`${inventoryStats.totalOut.toLocaleString('pt-BR')} L`} icon={<DropIcon className="w-8 h-8"/>} color="text-orange-400"/>
-                  <MetricCard title="Preço Médio / Litro" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageFuelPrice)} icon={<ShoppingCartIcon className="w-8 h-8"/>} color="text-yellow-400"/>
+                  <MetricCard title="Consumo (MÃªs)" value={`${inventoryStats.totalOut.toLocaleString('pt-BR')} L`} icon={<DropIcon className="w-8 h-8"/>} color="text-orange-400"/>
+                  <MetricCard title="PreÃ§o MÃ©dio / Litro" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageFuelPrice)} icon={<ShoppingCartIcon className="w-8 h-8"/>} color="text-yellow-400"/>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 bg-brand-secondary p-6 rounded-lg shadow-lg border-l-4 border-orange-500">
                       <h4 className="text-lg font-bold text-brand-light mb-4 flex items-center gap-2">
-                          <ChartIcon className="w-5 h-5 text-orange-400"/> Ranking de Consumo (Mês)
+                          <ChartIcon className="w-5 h-5 text-orange-400"/> Ranking de Consumo (MÃªs)
                       </h4>
                       <div className="space-y-4">
                           {consumptionStats.monthList.map((item, idx) => (<div key={idx} className="relative">
@@ -777,7 +835,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                       <div className="h-full bg-gradient-to-r from-orange-600 to-orange-400" style={{ width: `${(item.val / consumptionStats.maxMonth) * 100}%` }}></div>
                                   </div>
                               </div>))}
-                          {consumptionStats.monthList.length === 0 && <p className="text-brand-muted italic text-sm">Sem consumo este mês.</p>}
+                          {consumptionStats.monthList.length === 0 && <p className="text-brand-muted italic text-sm">Sem consumo este mÃªs.</p>}
                       </div>
                   </div>
 
@@ -791,7 +849,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                               <p className="text-2xl font-black text-brand-light uppercase leading-none mb-1 line-clamp-2">{consumptionStats.topLifetime.name}</p>
                               <p className="text-4xl font-black text-purple-400 tracking-tighter">{consumptionStats.topLifetime.val.toLocaleString('pt-BR')}<span className="text-lg text-brand-muted ml-1">L</span></p>
                               <div className="mt-4 inline-block bg-purple-500/20 text-purple-300 px-3 py-1 rounded text-[10px] font-black uppercase border border-purple-500/30">
-                                  Desde o início
+                                  Desde o inÃ­cio
                               </div>
                           </div>) : (<p className="text-brand-muted italic relative z-10">Sem dados registrados.</p>)}
                   </div>
@@ -857,7 +915,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
 
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg">
                   <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-6 gap-6">
-                      <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2"><HistoryIcon className="w-5 h-5 text-brand-accent"/> Histórico de Abastecimentos</h4>
+                      <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2"><HistoryIcon className="w-5 h-5 text-brand-accent"/> HistÃ³rico de Abastecimentos</h4>
                       <div className="flex flex-col sm:flex-row items-end gap-3 bg-brand-primary p-3 rounded-xl border border-slate-700 shadow-inner">
                           <div className="w-full sm:w-auto">
                               <label className="block text-[10px] font-black text-brand-muted uppercase mb-1">Equipamento</label>
@@ -867,7 +925,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                               </select>
                           </div>
                           <div className="w-full sm:w-auto">
-                              <label className="block text-[10px] font-black text-brand-muted uppercase mb-1">Início</label>
+                              <label className="block text-[10px] font-black text-brand-muted uppercase mb-1">InÃ­cio</label>
                               <input type="date" value={reportStartDate} onChange={e => setReportStartDate(e.target.value)} className="bg-brand-secondary border border-slate-600 text-brand-light rounded-lg px-3 py-2 text-xs outline-none w-full sm:w-40"/>
                           </div>
                           <div className="w-full sm:w-auto">
@@ -880,7 +938,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[600px] overflow-y-auto">
                       <table className="min-w-full text-sm text-left text-brand-muted">
                           <thead className="bg-slate-800 text-brand-light uppercase sticky top-0 z-10">
-                              <tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Prefixo</th><th className="px-4 py-3">Máquina</th><th className="px-4 py-3 text-right">Diesel (L)</th></tr>
+                              <tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Prefixo</th><th className="px-4 py-3">MÃ¡quina</th><th className="px-4 py-3 text-right">Diesel (L)</th></tr>
                           </thead>
                           <tbody className="divide-y divide-slate-700">
                               {filteredRecords.map(record => (<tr key={record.id} className="hover:bg-slate-700/50 transition-colors">
@@ -898,13 +956,13 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   <div>
                       <h3 className="text-lg font-bold text-brand-light flex items-center gap-2">
                           <PrinterIcon className="w-6 h-6 text-brand-accent"/>
-                          Relatório de Abastecimentos
+                          RelatÃ³rio de Abastecimentos
                       </h3>
-                      <p className="text-sm text-brand-muted mt-1">Gere um documento PDF com o histórico de consumo filtrado pelo período e equipamentos selecionados acima.</p>
+                      <p className="text-sm text-brand-muted mt-1">Gere um documento PDF com o histÃ³rico de consumo filtrado pelo perÃ­odo e equipamentos selecionados acima.</p>
                   </div>
                   <button onClick={() => setIsAbastecimentoReportOpen(true)} className="bg-brand-primary hover:bg-slate-800 text-brand-light border border-slate-600 px-6 py-3 rounded-lg text-xs font-bold uppercase shadow-lg flex items-center gap-2 transition-all active:scale-95 whitespace-nowrap">
                       <PrinterIcon className="w-4 h-4 text-brand-accent"/>
-                      Visualizar Relatório (PDF)
+                      Visualizar RelatÃ³rio (PDF)
                   </button>
               </div>
 
@@ -913,9 +971,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                           <div className="bg-brand-primary p-4 border-b border-slate-600 flex justify-between items-center shrink-0">
                               <div>
                                   <h2 className="text-xl font-bold text-brand-light flex items-center gap-2">
-                                      <PrinterIcon className="w-6 h-6 text-brand-accent"/> Relatório de Controle de Abastecimento
+                                      <PrinterIcon className="w-6 h-6 text-brand-accent"/> RelatÃ³rio de Controle de Abastecimento
                                   </h2>
-                                  <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">Pré-visualização de Documento</p>
+                                  <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">PrÃ©-visualizaÃ§Ã£o de Documento</p>
                               </div>
                               <button onClick={() => setIsAbastecimentoReportOpen(false)} className="text-brand-muted hover:text-brand-light p-2 rounded-full hover:bg-slate-700 transition-all"><XMarkIcon className="w-6 h-6"/></button>
                           </div>
@@ -923,20 +981,20 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                           <div className="flex-1 overflow-y-auto p-6 bg-white text-slate-800">
                               <div className="border-b-4 border-slate-800 pb-4 mb-6 flex justify-between items-end">
                                   <div>
-                                      <h1 className="text-2xl font-black uppercase text-slate-900">Relatório de Abastecimentos</h1>
-                                      <p className="text-sm font-bold text-slate-500">Histórico de Consumo e Status do Tanque</p>
+                                      <h1 className="text-2xl font-black uppercase text-slate-900">RelatÃ³rio de Abastecimentos</h1>
+                                      <p className="text-sm font-bold text-slate-500">HistÃ³rico de Consumo e Status do Tanque</p>
                                   </div>
                                   <div className="text-right">
-                                      <p className="text-xs font-bold text-slate-400 uppercase">Período Selecionado</p>
+                                      <p className="text-xs font-bold text-slate-400 uppercase">PerÃ­odo Selecionado</p>
                                       <p className="text-lg font-black text-slate-800">
-                                          {new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                          {new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} atÃ© {new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}
                                       </p>
                                   </div>
                               </div>
 
                               <div className="grid grid-cols-4 gap-4 mb-8">
                                   <div className="bg-slate-100 p-3 rounded border">
-                                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Nível Tanque Atual</span>
+                                      <span className="text-[9px] uppercase font-bold text-slate-400 block">NÃ­vel Tanque Atual</span>
                                       <span className="text-lg font-bold text-blue-600">{inventoryStats.currentLevel.toLocaleString('pt-BR')} L</span>
                                   </div>
                                   <div className="bg-slate-100 p-3 rounded border">
@@ -944,7 +1002,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                       <span className="text-lg font-bold text-green-600">{inventoryStats.totalIn.toLocaleString('pt-BR')} L</span>
                                   </div>
                                   <div className="bg-slate-100 p-3 rounded border">
-                                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Consumo no Período</span>
+                                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Consumo no PerÃ­odo</span>
                                       <span className="text-lg font-bold text-amber-600">
                                           {filteredRecords.reduce((acc, r) => acc + (parseFloat(r.diesel) || 0), 0).toLocaleString('pt-BR')} L
                                       </span>
@@ -955,7 +1013,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                   </div>
                               </div>
 
-                              <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">Detalhamento dos Lançamentos</h3>
+                              <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">Detalhamento dos LanÃ§amentos</h3>
                               <table className="w-full text-xs text-left mb-8 border-collapse">
                                   <thead className="bg-slate-800 text-white font-bold">
                                       <tr>
@@ -963,7 +1021,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                           <th className="p-3">Prefixo</th>
                                           <th className="p-3">Equipamento</th>
                                           <th className="p-3 text-right">Volume (L)</th>
-                                          <th className="p-3 text-center">Horímetro</th>
+                                          <th className="p-3 text-center">HorÃ­metro</th>
                                       </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-200">
@@ -974,7 +1032,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                               <td className="p-3 text-right font-mono font-bold text-slate-700">{r.diesel} L</td>
                                               <td className="p-3 text-center">{r.h_km}</td>
                                           </tr>))}
-                                      {filteredRecords.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic font-bold">Nenhum registro encontrado neste período.</td></tr>}
+                                      {filteredRecords.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic font-bold">Nenhum registro encontrado neste perÃ­odo.</td></tr>}
                                   </tbody>
                               </table>
                           </div>
@@ -997,7 +1055,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                 <div className="flex items-center gap-3">
                     <div className="bg-brand-accent/20 p-2 rounded-lg"><BridgeIcon className="w-8 h-8 text-brand-accent"/></div>
                     <div>
-                        <h3 className="text-xl font-bold text-brand-light">Gestão de Pontes</h3>
+                        <h3 className="text-xl font-bold text-brand-light">GestÃ£o de Pontes</h3>
                         <p className="text-[10px] text-brand-muted uppercase font-black tracking-widest">Controle de Projetos e Custos</p>
                     </div>
                 </div>
@@ -1010,27 +1068,27 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                 </div>
               </div>
 
-              {/* Cards de Métricas (Novos - Substituindo os antigos) */}
+              {/* Cards de MÃ©tricas (Novos - Substituindo os antigos) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <MetricCard title="Custos Materiais" value={formatCurrency(bridgeProjectTotals.matCost)} icon={<CubeIcon className="w-8 h-8"/>} color="text-green-400"/>
-                  <MetricCard title="Mão de Obra + Fixos" value={formatCurrency(bridgeProjectTotals.labCost)} icon={<UserGroupIcon className="w-8 h-8"/>} color="text-blue-400"/>
+                  <MetricCard title="MÃ£o de Obra + Fixos" value={formatCurrency(bridgeProjectTotals.labCost)} icon={<UserGroupIcon className="w-8 h-8"/>} color="text-blue-400"/>
                   <MetricCard title="Custo Equipamentos" value={formatCurrency(bridgeProjectTotals.equipCost)} icon={<GraderIcon className="w-8 h-8"/>} color="text-amber-400"/>
                   <div className="relative group cursor-pointer" onClick={() => setIsBridgeReportModalOpen(true)}>
                       <MetricCard title="Custo Total" value={formatCurrency(bridgeProjectTotals.total)} icon={<ChartIcon className="w-8 h-8"/>} color="text-brand-accent"/>
-                      {/* Botão flutuante de relatório sobre o card */}
+                      {/* BotÃ£o flutuante de relatÃ³rio sobre o card */}
                       <div className="absolute top-2 right-2 bg-brand-light/10 backdrop-blur-sm p-1.5 rounded-full hover:bg-brand-accent/80 transition-all border border-white/20 shadow-lg z-10 group-hover:scale-110">
                           <PrinterIcon className="w-4 h-4 text-white"/>
                       </div>
                       {/* Tooltip */}
                       <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <span className="bg-white text-brand-primary font-bold text-xs px-3 py-1 rounded shadow-lg uppercase tracking-wide">Gerar Relatório</span>
+                          <span className="bg-white text-brand-primary font-bold text-xs px-3 py-1 rounded shadow-lg uppercase tracking-wide">Gerar RelatÃ³rio</span>
                       </div>
                   </div>
               </div>
 
-              {/* Seção de Diários (Mantida) */}
+              {/* SeÃ§Ã£o de DiÃ¡rios (Mantida) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-amber-500">
-                  <h3 className="text-lg font-bold text-brand-light mb-4">Últimos Registros de Diário (Projeto Selecionado)</h3>
+                  <h3 className="text-lg font-bold text-brand-light mb-4">Ãšltimos Registros de DiÃ¡rio (Projeto Selecionado)</h3>
                   <div className="space-y-3">
                       {selectedProjectLogs.length > 0 ? selectedProjectLogs.slice(0, 3).map(log => (<div key={log.id} className="bg-brand-primary p-4 rounded-lg border border-slate-700">
                               <div className="flex justify-between items-center mb-2">
@@ -1038,11 +1096,11 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                   <span className="text-[10px] text-brand-muted uppercase font-black">{log.weather}</span>
                               </div>
                               <p className="text-sm text-brand-light italic">"{log.description}"</p>
-                          </div>)) : (<div className="text-center py-4 text-brand-muted italic">Nenhum diário registrado para este projeto.</div>)}
+                          </div>)) : (<div className="text-center py-4 text-brand-muted italic">Nenhum diÃ¡rio registrado para este projeto.</div>)}
                   </div>
               </div>
 
-              {/* Modal de Relatório de Pontes */}
+              {/* Modal de RelatÃ³rio de Pontes */}
               {selectedBridgeProjectId && currentBridgeProject && (<DashboardBridgeReportModal isOpen={isBridgeReportModalOpen} onClose={() => setIsBridgeReportModalOpen(false)} project={currentBridgeProject} materials={bridgeMaterials.filter(m => m.bridgeProjectId === selectedBridgeProjectId)} employees={bridgeEmployees.filter(e => e.bridgeProjectId === selectedBridgeProjectId)} dailyLogs={dailyLogs.filter(l => l.bridgeProjectId === selectedBridgeProjectId)}/>)}
           </div>)}
 
@@ -1052,7 +1110,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
         <div className="space-y-6 animate-in fade-in duration-300">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <MetricCard title="Prod. CBUQ Total" value={`${usinaProduction.reduce((a, b) => a + b.netCbuq, 0).toFixed(1)} t`} icon={<FactoryIcon className="w-8 h-8"/>} color="text-orange-400"/>
-                  <MetricCard title="Temperatura Média" value={`${avgTemp} °C`} icon={<ThermometerIcon className="w-8 h-8"/>} color="text-red-400"/>
+                  <MetricCard title="Temperatura MÃ©dia" value={`${avgTemp} Â°C`} icon={<ThermometerIcon className="w-8 h-8"/>} color="text-red-400"/>
                   <MetricCard title="CAP em Estoque" value={`${(bituStats['CAP']?.balance || 0).toFixed(1)} t`} icon={<CubeIcon className="w-8 h-8"/>} color="text-blue-400"/>
                   <MetricCard title="Horas Trabalhadas" value={`${usinaProduction.reduce((a, b) => a + b.workedHours, 0).toFixed(1)} h`} icon={<ClockIcon className="w-8 h-8"/>} color="text-green-400"/>
               </div>
@@ -1068,9 +1126,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   </div>
               </div>
 
-              {/* 2. Histórico Entradas (Ligantes) (NEW) */}
+              {/* 2. HistÃ³rico Entradas (Ligantes) (NEW) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg">
-                  <h5 className="text-brand-light font-bold mb-4 flex items-center gap-2"><TruckIcon className="w-5 h-5 text-blue-400"/> Histórico Entradas (Ligantes)</h5>
+                  <h5 className="text-brand-light font-bold mb-4 flex items-center gap-2"><TruckIcon className="w-5 h-5 text-blue-400"/> HistÃ³rico Entradas (Ligantes)</h5>
                   <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[350px] overflow-y-auto">
                       <table className="min-w-full text-sm text-left text-brand-muted">
                           <thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Produto</th><th className="px-4 py-3">NF</th><th className="px-4 py-3 text-right">Peso (t)</th></tr></thead>
@@ -1082,9 +1140,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   </div>
               </div>
 
-              {/* 3. Histórico Entradas (Agregados) (NEW) */}
+              {/* 3. HistÃ³rico Entradas (Agregados) (NEW) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-green-500">
-                  <h5 className="text-brand-light font-bold mb-4">Histórico Entradas (Agregados)</h5>
+                  <h5 className="text-brand-light font-bold mb-4">HistÃ³rico Entradas (Agregados)</h5>
                   <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[350px] overflow-y-auto">
                       <table className="min-w-full text-sm text-brand-muted"><thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Produto</th><th className="px-4 py-3 text-right">Peso</th></tr></thead><tbody>{sortedUsinaDeliveries.map((delivery) => (<tr key={delivery.id} className="border-b border-slate-700"><td className="px-4 py-3">{new Date(delivery.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td className="px-4 py-3">{delivery.product}</td><td className="px-4 py-3 text-right font-bold text-green-400">{delivery.tons.toFixed(2)}</td></tr>))}
                       {sortedUsinaDeliveries.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center italic">Sem dados.</td></tr>}
@@ -1092,12 +1150,12 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   </div>
               </div>
 
-              {/* 4. Controle Diário de Produção (READ ONLY VIEW) (NEW) */}
+              {/* 4. Controle DiÃ¡rio de ProduÃ§Ã£o (READ ONLY VIEW) (NEW) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-orange-500">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                       <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2">
                           <ClipboardListIcon className="w-6 h-6 text-orange-400"/> 
-                          Controle Diário de Produção
+                          Controle DiÃ¡rio de ProduÃ§Ã£o
                       </h4>
                       <div className="flex items-center gap-2 bg-brand-primary px-3 py-2 rounded-lg border border-slate-700 shadow-inner">
                           <CalendarIcon className="w-4 h-4 text-brand-accent"/>
@@ -1123,26 +1181,26 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                            <tr>
                                                <th className="p-2 text-left">Prefixo</th>
                                                <th className="p-2 text-center">Ton</th>
-                                               <th className="p-2 text-center">°C</th>
+                                               <th className="p-2 text-center">Â°C</th>
                                            </tr>
                                        </thead>
                                        <tbody className="divide-y divide-slate-700">
                                           {latestLoads.length > 0 ? latestLoads.map(load => (<tr key={load.id}>
                                                   <td className="p-2 text-left">{load.plate}</td>
                                                   <td className="p-2 text-center">{load.tons}</td>
-                                                  <td className="p-2 text-center">{load.temperature}°</td>
+                                                  <td className="p-2 text-center">{load.temperature}Â°</td>
                                               </tr>)) : (<tr><td colSpan={3} className="p-4 text-center italic">Sem viagens registradas.</td></tr>)}
                                        </tbody>
                                    </table>
                               </div>
                           </div>
                           
-                          {/* Produção View */}
+                          {/* ProduÃ§Ã£o View */}
                           <div className="lg:col-span-3 bg-brand-primary p-4 rounded-lg border border-slate-700 space-y-3">
-                              <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-2">Produção</h5>
+                              <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-2">ProduÃ§Ã£o</h5>
                               <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">Bruta: {latestProd?.grossCbuq || '-'} t</div>
                               <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">Rejeito: {latestProd?.waste || '-'} t</div>
-                              <div className="bg-slate-700/50 p-3 rounded text-center border border-slate-600 mt-4"><span className="block text-xs text-brand-muted uppercase">Líquida</span><span className="text-2xl font-bold text-green-400">{latestProd?.netCbuq.toFixed(2) || '0.00'} t</span></div>
+                              <div className="bg-slate-700/50 p-3 rounded text-center border border-slate-600 mt-4"><span className="block text-xs text-brand-muted uppercase">LÃ­quida</span><span className="text-2xl font-bold text-green-400">{latestProd?.netCbuq.toFixed(2) || '0.00'} t</span></div>
                           </div>
 
                           {/* Consumo View */}
@@ -1151,7 +1209,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                               <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">CAP: {latestProd?.capConsumed || '-'} t</div>
                               <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">Brita 1: {latestProd?.brita1Consumed || '-'} t</div>
                               <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">Brita 0: {latestProd?.brita0Consumed || '-'} t</div>
-                              <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">Pó: {latestProd?.stoneDustConsumed || '-'} t</div>
+                              <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">PÃ³: {latestProd?.stoneDustConsumed || '-'} t</div>
                           </div>
 
                           {/* Horas View */}
@@ -1171,12 +1229,12 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                            <thead className="bg-slate-800 text-xs uppercase sticky top-0">
                                <tr>
                                    <th className="px-4 py-3 text-left">Data</th>
-                                   <th className="px-4 py-3 text-center">Prod. Líq</th>
+                                   <th className="px-4 py-3 text-center">Prod. LÃ­q</th>
                                    <th className="px-4 py-3 text-center">Rejeito</th>
                                    <th className="px-4 py-3 text-center">CAP</th>
                                    <th className="px-4 py-3 text-center">Brita 1</th>
                                    <th className="px-4 py-3 text-center">Brita 0</th>
-                                   <th className="px-4 py-3 text-center">Pó</th>
+                                   <th className="px-4 py-3 text-center">PÃ³</th>
                                    <th className="px-4 py-3 text-center">Horas</th>
                                </tr>
                            </thead>
@@ -1199,3 +1257,4 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
     </div>);
 };
 export default DashboardView;
+

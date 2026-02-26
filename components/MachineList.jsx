@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MachineStatus } from '../types';
 import { PlusIcon, TrashIcon, CheckCircleIcon } from './icons';
 import StatusBadge from './StatusBadge';
-const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd = [], viewMode, readOnly = false, onAddHorimetro, onSelectMachine, onAddMachineToDashboard, onRemoveMachineFromDashboard, onUpdateMachineStatus, onRegisterFuel, onOpenLubrication, lubricationStatusMap = {}, dashboardMachineIds = [], }) => {
+const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd = [], viewMode, readOnly = false, onAddHorimetro, onSelectMachine, onAddMachineToDashboard, onRemoveMachineFromDashboard, onUpdateMachineStatus, onRegisterFuel, onOpenLubrication, lubricationStatusMap = {}, dashboardMachineIds = [], entryDate, }) => {
     const [isAdding, setIsAdding] = useState(false);
     // Floating Status Logic
     const [openStatusPopoverId, setOpenStatusPopoverId] = useState(null);
     const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0 });
     const popoverRef = useRef(null);
+    const handleScrollClose = useRef(() => setOpenStatusPopoverId(null));
     const [dieselInputs, setDieselInputs] = useState({});
     const [hourMeterInputs, setHourMeterInputs] = useState({});
     const [lubricationSelections, setLubricationSelections] = useState({});
@@ -19,11 +20,11 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
         };
         if (openStatusPopoverId) {
             document.addEventListener('mousedown', handleClickOutside);
-            window.addEventListener('scroll', () => setOpenStatusPopoverId(null), true);
+            window.addEventListener('scroll', handleScrollClose.current, true);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
-            window.removeEventListener('scroll', () => setOpenStatusPopoverId(null), true);
+            window.removeEventListener('scroll', handleScrollClose.current, true);
         };
     }, [openStatusPopoverId]);
     const toggleStatusPopover = (e, machineId) => {
@@ -32,9 +33,24 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
         }
         else {
             const rect = e.currentTarget.getBoundingClientRect();
+            const popoverWidth = 192;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const minMargin = 12;
+            const statusCount = Object.values(MachineStatus).length;
+            const estimatedPopoverHeight = Math.min((viewportHeight * 0.7), 52 + statusCount * 42);
+            let top = rect.bottom + 5;
+            if (top + estimatedPopoverHeight > viewportHeight - minMargin)
+                top = viewportHeight - estimatedPopoverHeight - minMargin;
+            if (top < minMargin)
+                top = minMargin;
+            const minLeft = (popoverWidth / 2) + minMargin;
+            const maxLeft = viewportWidth - (popoverWidth / 2) - minMargin;
+            const rawLeft = rect.left + (rect.width / 2);
+            const left = Math.min(Math.max(rawLeft, minLeft), Math.max(maxLeft, minLeft));
             setPopoverCoords({
-                top: rect.bottom + 5,
-                left: rect.left + rect.width / 2
+                top,
+                left
             });
             setOpenStatusPopoverId(machineId);
         }
@@ -63,7 +79,7 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
         const enteredHours = hourMeterInputs[machine.id];
         const hours = enteredHours ? parseFloat(enteredHours) : machine.hours;
         if (liters > 0 && onRegisterFuel) {
-            onRegisterFuel(machine, liters, hours);
+            onRegisterFuel(machine, liters, hours, entryDate);
             setDieselInputs(prev => ({ ...prev, [machine.id]: '' }));
             setHourMeterInputs(prev => {
                 const newState = { ...prev };
@@ -91,7 +107,7 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
       <table className="min-w-full text-sm text-left text-brand-muted">
         <thead className="bg-brand-primary text-xs uppercase">
           <tr>
-            <th scope="col" className="px-6 py-3">Prefixo</th>
+            <th scope="col" className="px-6 py-3 w-28 min-w-[112px]">Prefixo</th>
             <th scope="col" className="px-6 py-3">Máquina</th>
             {showBrand && <th scope="col" className="px-6 py-3 hidden md:table-cell">Marca</th>}
             <th scope="col" className="px-6 py-3">{isAbastecimentoMode ? 'Diesel (L)' : 'Status'}</th>
@@ -107,7 +123,7 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
             const hasLubData = lubricationStatusMap[machine.id];
             const lubSelectValue = lubricationSelections[machine.id] || (hasLubData ? 'Sim' : 'Não');
             return (<tr key={machine.id} className="bg-brand-secondary border-b border-brand-primary hover:bg-slate-700 transition-colors">
-                <td className="px-6 py-4 font-black text-brand-accent uppercase">{machine.prefix}</td>
+                <td className="px-6 py-4 font-black text-brand-accent uppercase font-mono whitespace-nowrap w-28 min-w-[112px]">{machine.prefix}</td>
                 <td className="px-6 py-4 font-medium text-brand-light whitespace-nowrap cursor-pointer hover:text-brand-accent transition-colors" onClick={() => onSelectMachine(machine)}>
                     {machine.name} {machine.model}
                 </td>
@@ -156,7 +172,7 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
       </table>
 
       {/* FLOATING MACHINE STATUS MENU */}
-      {openStatusPopoverId && !readOnly && onUpdateMachineStatus && (<div ref={popoverRef} className="fixed z-[100] w-48 bg-brand-primary border border-slate-600 rounded-lg shadow-2xl p-1 animate-in zoom-in-95 duration-100" style={{
+      {openStatusPopoverId && !readOnly && onUpdateMachineStatus && (<div ref={popoverRef} className="fixed z-[100] w-48 max-h-[70vh] overflow-y-auto bg-brand-primary border border-slate-600 rounded-lg shadow-2xl p-1 animate-in zoom-in-95 duration-100" style={{
                 top: `${popoverCoords.top}px`,
                 left: `${popoverCoords.left}px`,
                 transform: 'translateX(-50%)'

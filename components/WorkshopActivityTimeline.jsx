@@ -1,7 +1,47 @@
 import React, { useMemo } from 'react';
 import { MachineStatus } from '../types';
 import { WrenchIcon, AdjustableWrenchIcon, CheckCircleIcon, InfoIcon, ClockIcon, CalendarIcon, CogIcon } from './icons';
-const WorkshopActivityTimeline = ({ machines, limit = 10 }) => {
+const parseForecastChangeFromMessage = (rawMessage) => {
+    const message = String(rawMessage || '').replace(/\s+/g, ' ').trim();
+    if (!message)
+        return null;
+    let actorLabel = 'Usuario';
+    let content = message;
+    const prefixedMatch = message.match(/^(.+?):\s(.+)$/);
+    if (prefixedMatch && /Previs[aã]o de libera[cç][aã]o/i.test(prefixedMatch[2])) {
+        actorLabel = prefixedMatch[1];
+        content = prefixedMatch[2];
+    }
+    const match = content.match(/Previs[aã]o de libera[cç][aã]o do\s+(.+?)\s+alterada de\s+(.+?)\s+para\s+(.+?)\.?$/i);
+    if (!match) {
+        return null;
+    }
+    return {
+        actorLabel,
+        machinePrefix: match[1],
+        fromLabel: match[2],
+        toLabel: match[3]
+    };
+};
+const parseForecastChangeFromItem = (item) => {
+    const metadata = item?.metadata || item?.context || {};
+    if (metadata?.event === 'forecast_update') {
+        const machinePrefix = String(metadata.machinePrefix || '').trim();
+        if (!machinePrefix) {
+            return null;
+        }
+        const actorName = item?.actorName || 'Usuario';
+        const actorRole = item?.actorRole ? ` (${item.actorRole})` : '';
+        return {
+            actorLabel: `${actorName}${actorRole}`,
+            machinePrefix,
+            fromLabel: metadata.fromLabel || 'sem previsao',
+            toLabel: metadata.toLabel || 'sem previsao'
+        };
+    }
+    return parseForecastChangeFromMessage(item?.message);
+};
+const WorkshopActivityTimeline = ({ machines, limit = 10, activityFeed = [] }) => {
     const formatDuration = (startDate, startTime, endDate, endTime) => {
         if (!startDate || !endDate)
             return '';
@@ -91,6 +131,24 @@ const WorkshopActivityTimeline = ({ machines, limit = 10 }) => {
                 });
             });
         });
+        (activityFeed || []).forEach((item) => {
+            const parsed = parseForecastChangeFromItem(item);
+            if (!parsed) {
+                return;
+            }
+            const machine = machines.find((m) => String(m.prefix || '').toLowerCase() === String(parsed.machinePrefix || '').toLowerCase());
+            const candidateTimestamp = item?.timestamp ? new Date(item.timestamp) : new Date();
+            const timestamp = Number.isNaN(candidateTimestamp.getTime()) ? new Date() : candidateTimestamp;
+            allEvents.push({
+                id: item?.id || `forecast-${parsed.machinePrefix}-${timestamp.toISOString()}`,
+                date: timestamp,
+                time: timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                type: 'forecast_update',
+                machinePrefix: parsed.machinePrefix,
+                machineName: machine?.name || 'Equipamento',
+                description: `${parsed.actorLabel} mudou previsão de liberação de ${parsed.fromLabel} para ${parsed.toLabel}.`
+            });
+        });
         return allEvents
             .sort((a, b) => {
             const dateDiff = b.date.getTime() - a.date.getTime();
@@ -99,7 +157,7 @@ const WorkshopActivityTimeline = ({ machines, limit = 10 }) => {
             return (b.time || '00:00').localeCompare(a.time || '00:00');
         })
             .slice(0, limit);
-    }, [machines, limit]);
+    }, [activityFeed, machines, limit]);
     if (events.length === 0) {
         return <p className="text-center py-12 text-brand-muted italic text-sm border border-dashed border-slate-700 rounded-xl bg-brand-primary/20">Sem atividades recentes registradas.</p>;
     }
@@ -124,6 +182,7 @@ const WorkshopActivityTimeline = ({ machines, limit = 10 }) => {
             case 'exit': return { icon: <CheckCircleIcon className="w-3.5 h-3.5"/>, color: 'bg-green-500', text: 'text-green-500', border: 'border-green-500/20' };
             case 'issue': return { icon: <InfoIcon className="w-3.5 h-3.5"/>, color: 'bg-red-500', text: 'text-red-500', border: 'border-red-500/20' };
             case 'resolution': return { icon: <ClockIcon className="w-3.5 h-3.5"/>, color: 'bg-blue-500', text: 'text-blue-500', border: 'border-blue-500/20' };
+            case 'forecast_update': return { icon: <CalendarIcon className="w-3.5 h-3.5"/>, color: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500/20' };
             default: return { icon: <WrenchIcon className="w-3.5 h-3.5"/>, color: 'bg-slate-500', text: 'text-slate-500', border: 'border-slate-500/20' };
         }
     };

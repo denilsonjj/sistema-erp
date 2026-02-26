@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { UsersIcon, PencilIcon, ShieldIcon, BuildingIcon, PlusIcon, TrashIcon } from './icons';
 
-const MAX_USERS = 15;
+const MAX_USERS = 25;
 
 const EMPTY_PERMISSIONS = {
     editDashboard: false,
@@ -23,7 +23,6 @@ const PERMISSION_OPTIONS = [
     { key: 'viewPontes', label: 'Pontes' },
     { key: 'viewUsina', label: 'Usina de Asfalto' },
     { key: 'editBancoDados', label: 'Banco de Dados' },
-    { key: 'viewRelatorios', label: 'Relatorios' },
     { key: 'editConfiguracoes', label: 'Configuracoes' }
 ];
 
@@ -48,7 +47,6 @@ const ConfiguracoesView = ({
 
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
-    const [username, setUsername] = useState('');
     const [allowedObraId, setAllowedObraId] = useState('all');
     const [permissions, setPermissions] = useState({ ...EMPTY_PERMISSIONS });
 
@@ -56,7 +54,6 @@ const ConfiguracoesView = ({
     const [newPassword, setNewPassword] = useState('');
     const [newName, setNewName] = useState('');
     const [newRole, setNewRole] = useState('Operador');
-    const [newUsername, setNewUsername] = useState('');
     const [newAllowedObraId, setNewAllowedObraId] = useState('all');
     const [newPermissions, setNewPermissions] = useState({ ...EMPTY_PERMISSIONS });
     const [newIsAdmin, setNewIsAdmin] = useState(false);
@@ -69,7 +66,6 @@ const ConfiguracoesView = ({
         setEditingUser(user);
         setName(user.name || '');
         setRole(user.role || '');
-        setUsername(user.username || '');
         setAllowedObraId(user.allowedObraId || 'all');
         setPermissions({
             ...EMPTY_PERMISSIONS,
@@ -90,7 +86,6 @@ const ConfiguracoesView = ({
         setNewPassword('');
         setNewName('');
         setNewRole('Operador');
-        setNewUsername('');
         setNewAllowedObraId('all');
         setNewPermissions({ ...EMPTY_PERMISSIONS });
         setNewIsAdmin(false);
@@ -112,7 +107,6 @@ const ConfiguracoesView = ({
         const result = await onSaveUser({
             name: name.trim(),
             role: role.trim(),
-            username: username.trim(),
             allowedObraId,
             permissions
         }, editingUser.id);
@@ -131,7 +125,6 @@ const ConfiguracoesView = ({
             password: newPassword,
             name: newName.trim(),
             role: newRole.trim() || 'Operador',
-            username: newUsername.trim(),
             allowedObraId: newAllowedObraId,
             permissions: newPermissions,
             isAdmin: newIsAdmin,
@@ -177,7 +170,7 @@ const ConfiguracoesView = ({
                             Gerenciamento de Usuarios
                         </h3>
                         <p className="text-sm text-brand-muted mt-1">
-                            CRUD basico de usuarios com limite de 15 ativos.
+                            CRUD basico de usuarios com limite de 25 ativos.
                         </p>
                         <p className="text-xs text-brand-muted mt-1">
                             {activeUsersCount}/{MAX_USERS} usuarios ativos.
@@ -223,7 +216,7 @@ const ConfiguracoesView = ({
                             <tr>
                                 <th className="px-4 py-3">Nome</th>
                                 <th className="px-4 py-3">Funcao</th>
-                                <th className="px-4 py-3">Login</th>
+                                <th className="px-4 py-3">Email/Login</th>
                                 <th className="px-4 py-3">Obra</th>
                                 <th className="px-4 py-3">Status</th>
                                 <th className="px-4 py-3">Permissoes</th>
@@ -239,7 +232,7 @@ const ConfiguracoesView = ({
                                     <tr key={user.id} className="border-b border-brand-primary hover:bg-slate-700 transition-colors">
                                         <td className="px-4 py-4 font-medium text-brand-light">{user.name}</td>
                                         <td className="px-4 py-4">{user.role}</td>
-                                        <td className="px-4 py-4">{user.username}</td>
+                                        <td className="px-4 py-4">{user.username || '-'}</td>
                                         <td className="px-4 py-4">{obraName}</td>
                                         <td className="px-4 py-4">
                                             <span className={`px-2 py-0.5 rounded text-xs ${user.isActive === false
@@ -309,9 +302,6 @@ const ConfiguracoesView = ({
                                 <PencilIcon className="w-5 h-5" />
                                 Editar Usuario
                             </h2>
-                            <button onClick={closeEditModal} className="text-brand-muted hover:text-brand-light">
-                                &times;
-                            </button>
                         </div>
 
                         <form onSubmit={handleSaveEdit} className="space-y-4">
@@ -332,16 +322,6 @@ const ConfiguracoesView = ({
                                         type="text"
                                         value={role}
                                         onChange={(event) => setRole(event.target.value)}
-                                        className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded-md p-2 focus:ring-2 focus:ring-brand-accent focus:outline-none"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-brand-muted mb-1">Login (username)</label>
-                                    <input
-                                        type="text"
-                                        value={username}
-                                        onChange={(event) => setUsername(event.target.value)}
                                         className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded-md p-2 focus:ring-2 focus:ring-brand-accent focus:outline-none"
                                         required
                                     />
@@ -415,9 +395,6 @@ const ConfiguracoesView = ({
                                 <PlusIcon className="w-5 h-5" />
                                 Novo Usuario
                             </h2>
-                            <button onClick={closeCreateModal} className="text-brand-muted hover:text-brand-light">
-                                &times;
-                            </button>
                         </div>
 
                         <form onSubmit={handleCreate} className="space-y-4">
@@ -431,6 +408,7 @@ const ConfiguracoesView = ({
                                         className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded-md p-2 focus:ring-2 focus:ring-brand-accent focus:outline-none"
                                         required
                                     />
+                                    <p className="mt-1 text-[11px] text-brand-muted">Obrigatorio: login apenas por email.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-brand-muted mb-1">Senha</label>
@@ -459,16 +437,6 @@ const ConfiguracoesView = ({
                                         type="text"
                                         value={newRole}
                                         onChange={(event) => setNewRole(event.target.value)}
-                                        className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded-md p-2 focus:ring-2 focus:ring-brand-accent focus:outline-none"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-brand-muted mb-1">Login (username)</label>
-                                    <input
-                                        type="text"
-                                        value={newUsername}
-                                        onChange={(event) => setNewUsername(event.target.value)}
                                         className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded-md p-2 focus:ring-2 focus:ring-brand-accent focus:outline-none"
                                         required
                                     />

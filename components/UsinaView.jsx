@@ -1,8 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FactoryIcon, ChartIcon, CubeIcon, PlusIcon, TruckIcon, TrashIcon, ClipboardListIcon, PrinterIcon, XMarkIcon, CogIcon } from './icons';
 import MetricCard from './MetricCard';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+const LIGANTE_DRAFT_KEY = 'erp_usina_ligante_draft_v1';
+const readLiganteDraft = () => {
+    if (typeof window === 'undefined') {
+        return {};
+    }
+    try {
+        const raw = window.localStorage.getItem(LIGANTE_DRAFT_KEY);
+        return raw ? JSON.parse(raw) : {};
+    }
+    catch (_error) {
+        return {};
+    }
+};
 // Componente local para MetricCard com fonte menor no título
 const SmallMetricCard = ({ title, value, icon, color }) => {
     return (<div className="bg-brand-secondary p-4 rounded-lg shadow-lg flex items-center space-x-3 transition-transform transform hover:scale-105 overflow-hidden border border-slate-700/50">
@@ -49,9 +62,16 @@ const BituVisualTank3D = ({ label, current, capacity }) => {
 const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBituDeliveries, productionLogs, setProductionLogs, loadEntries, setLoadEntries, tankCapacities, setTankCapacities }) => {
     const todayStr = new Date().toISOString().split('T')[0];
     const firstDayStr = new Date().toISOString().slice(0, 8) + '01';
+    const liganteDraft = useMemo(() => readLiganteDraft(), []);
+    const parseLocaleDecimal = (value) => {
+        const normalized = String(value || '').trim().replace(',', '.');
+        const parsed = Number.parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+    };
     // --- LOCAL FORM STATE ---
     const [newProduct, setNewProduct] = useState('Brita 1');
     const [isCustomProduct, setIsCustomProduct] = useState(false);
+    const [newAggregateDate, setNewAggregateDate] = useState(todayStr);
     const [newTons, setNewTons] = useState('');
     const [newTicket, setNewTicket] = useState('');
     const [viewedAggregate, setViewedAggregate] = useState('Total Geral');
@@ -61,11 +81,12 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
     const [reportEndDate, setReportEndDate] = useState(todayStr);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     // --- BITUMINOUS FORM STATE ---
-    const [newBituProduct, setNewBituProduct] = useState('CAP');
-    const [newBituTons, setNewBituTons] = useState('');
-    const [newBituTicket, setNewBituTicket] = useState('');
-    const [newBituPlate, setNewBituPlate] = useState('');
-    const [newBituSupplier, setNewBituSupplier] = useState('');
+    const [newBituProduct, setNewBituProduct] = useState(liganteDraft.newBituProduct || 'CAP');
+    const [newBituDate, setNewBituDate] = useState(liganteDraft.newBituDate || todayStr);
+    const [newBituTons, setNewBituTons] = useState(liganteDraft.newBituTons || '');
+    const [newBituTicket, setNewBituTicket] = useState(liganteDraft.newBituTicket || '');
+    const [newBituPlate, setNewBituPlate] = useState(liganteDraft.newBituPlate || '');
+    const [newBituSupplier, setNewBituSupplier] = useState(liganteDraft.newBituSupplier || '');
     const [loadPlate, setLoadPlate] = useState('');
     const [loadTons, setLoadTons] = useState('');
     const [loadTemp, setLoadTemp] = useState('');
@@ -78,6 +99,19 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
     const [prodDust, setProdDust] = useState('');
     const [prodInitialHM, setProdInitialHM] = useState('');
     const [prodFinalHM, setProdFinalHM] = useState('');
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        window.localStorage.setItem(LIGANTE_DRAFT_KEY, JSON.stringify({
+            newBituProduct,
+            newBituDate,
+            newBituTons,
+            newBituTicket,
+            newBituPlate,
+            newBituSupplier
+        }));
+    }, [newBituDate, newBituPlate, newBituProduct, newBituSupplier, newBituTicket, newBituTons]);
     // --- CALCULATIONS ---
     const totals = useMemo(() => {
         const acc = { 'Brita 1': 0, 'Brita 0': 0, 'Pó de Pedra': 0, 'Pedra Pulmão': 0 };
@@ -136,7 +170,7 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
         e.preventDefault();
         if (!newTons || !newTicket || !newProduct)
             return;
-        setDeliveries(prev => [{ id: Date.now().toString(), date: todayStr, product: newProduct, tons: parseFloat(newTons), ticketNumber: newTicket }, ...prev]);
+        setDeliveries(prev => [{ id: Date.now().toString(), date: newAggregateDate || todayStr, product: newProduct, tons: parseLocaleDecimal(newTons), ticketNumber: newTicket }, ...prev]);
         setNewTons('');
         setNewTicket('');
         if (isCustomProduct)
@@ -150,9 +184,9 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
             return;
         setBituDeliveries(prev => [{
                 id: `bitu-${Date.now()}`,
-                date: todayStr,
+                date: newBituDate || todayStr,
                 product: newBituProduct,
-                tons: parseFloat(newBituTons),
+                tons: parseLocaleDecimal(newBituTons),
                 ticketNumber: newBituTicket,
                 plate: newBituPlate || '',
                 supplier: newBituSupplier
@@ -168,7 +202,7 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
         e.preventDefault();
         if (!loadPlate || !loadTons || !loadTemp || !prodDate)
             return;
-        setLoadEntries(prev => [...prev, { id: `load-${Date.now()}`, date: prodDate, plate: loadPlate, tons: parseFloat(loadTons), temperature: parseFloat(loadTemp) }]);
+        setLoadEntries(prev => [...prev, { id: `load-${Date.now()}`, date: prodDate, plate: loadPlate, tons: parseLocaleDecimal(loadTons), temperature: parseLocaleDecimal(loadTemp) }]);
         setLoadPlate('');
         setLoadTons('');
         setLoadTemp('');
@@ -179,11 +213,11 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
         e.preventDefault();
         if (!prodDate)
             return;
-        const gross = parseFloat(prodGross) || 0;
-        const waste = parseFloat(prodWaste) || 0;
-        const initial = parseFloat(prodInitialHM) || 0;
-        const final = parseFloat(prodFinalHM) || 0;
-        setProductionLogs(prev => [{ id: `prod-${Date.now()}`, date: prodDate, grossCbuq: gross, waste: waste, netCbuq: Math.max(0, gross - waste), capConsumed: parseFloat(prodCap) || 0, brita1Consumed: parseFloat(prodBrita1) || 0, brita0Consumed: parseFloat(prodBrita0) || 0, stoneDustConsumed: parseFloat(prodDust) || 0, initialHourMeter: initial, finalHourMeter: final, workedHours: Math.max(0, final - initial) }, ...prev]);
+        const gross = parseLocaleDecimal(prodGross);
+        const waste = parseLocaleDecimal(prodWaste);
+        const initial = parseLocaleDecimal(prodInitialHM);
+        const final = parseLocaleDecimal(prodFinalHM);
+        setProductionLogs(prev => [{ id: `prod-${Date.now()}`, date: prodDate, grossCbuq: gross, waste: waste, netCbuq: Math.max(0, gross - waste), capConsumed: parseLocaleDecimal(prodCap), brita1Consumed: parseLocaleDecimal(prodBrita1), brita0Consumed: parseLocaleDecimal(prodBrita0), stoneDustConsumed: parseLocaleDecimal(prodDust), initialHourMeter: initial, finalHourMeter: final, workedHours: Math.max(0, final - initial) }, ...prev]);
         setProdGross('');
         setProdWaste('');
         setProdCap('');
@@ -230,8 +264,8 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
         doc.save(`relatorio_usina_${reportStartDate}_a_${reportEndDate}.pdf`);
     };
     const trucks = useMemo(() => machines.filter(m => m.name.toLowerCase().includes('caminhão') && !m.name.toLowerCase().includes('pipa')), [machines]);
-    const currentNetProduction = Math.max(0, (parseFloat(prodGross) || 0) - (parseFloat(prodWaste) || 0));
-    const currentHours = Math.max(0, (parseFloat(prodFinalHM) || 0) - (parseFloat(prodInitialHM) || 0));
+    const currentNetProduction = Math.max(0, parseLocaleDecimal(prodGross) - parseLocaleDecimal(prodWaste));
+    const currentHours = Math.max(0, parseLocaleDecimal(prodFinalHM) - parseLocaleDecimal(prodInitialHM));
     return (<div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -291,7 +325,20 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                     <h5 className="text-brand-light font-bold mb-4 flex items-center gap-2"><PlusIcon className="w-5 h-5 text-green-400"/> Registrar Entrada Ligante</h5>
                     <form onSubmit={handleAddBituminous} className="space-y-4">
                         <div><label className="block text-sm font-medium text-brand-muted mb-1 uppercase">Produto</label><select value={newBituProduct} onChange={(e) => setNewBituProduct(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 focus:ring-1 focus:ring-brand-accent focus:outline-none"><option value="CAP">CAP</option><option value="EAI">EAI</option><option value="RR-2C">RR-2C</option><option value="RR-1C">RR-1C</option></select></div>
-                        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-brand-muted mb-1 uppercase">Peso (Ton)</label><input type="number" step="0.01" value={newBituTons} onChange={(e) => setNewBituTons(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" required/></div><div><label className="block text-sm font-medium text-brand-muted mb-1 uppercase">NF</label><input type="text" value={newBituTicket} onChange={(e) => setNewBituTicket(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" required/></div></div>
+                        <div>
+                            <label className="block text-sm font-medium text-brand-muted mb-1 uppercase">Data</label>
+                            <input type="date" value={newBituDate} onChange={(e) => setNewBituDate(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none"/>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-sm font-medium text-brand-muted mb-1 uppercase">Peso (Ton)</label>
+                                <input type="text" inputMode="decimal" value={newBituTons} onChange={(e) => setNewBituTons(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Ex: 33,55" required/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-brand-muted mb-1 uppercase">NF</label>
+                                <input type="text" value={newBituTicket} onChange={(e) => setNewBituTicket(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" required/>
+                            </div>
+                        </div>
                         
                         {/* Campos Adicionados: Placa e Fornecedor */}
                         <div className="grid grid-cols-2 gap-3">
@@ -326,13 +373,17 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
         <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-orange-500">
             <h4 className="text-lg font-semibold text-brand-light mb-6 flex items-center gap-2"><ClipboardListIcon className="w-6 h-6 text-orange-400"/> Controle Diário de Produção</h4>
             <form onSubmit={handleAddProduction} className="mb-8">
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-brand-muted mb-1 uppercase">Data da Producao</label>
+                    <input type="date" value={prodDate} onChange={e => setProdDate(e.target.value)} className="w-full sm:w-64 bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none" required/>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     <div className="lg:col-span-4 bg-brand-primary p-4 rounded-lg border border-slate-700 flex flex-col h-full">
                         <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-3 flex items-center gap-2"><TruckIcon className="w-4 h-4 text-orange-400"/> Viagens</h5>
                         <div className="grid grid-cols-3 gap-2 mb-3">
                             <select value={loadPlate} onChange={e => setLoadPlate(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs outline-none"><option value="">Prefixo...</option>{trucks.map(truck => (<option key={truck.id} value={truck.prefix}>{truck.prefix}</option>))}</select>
-                            <input type="number" step="0.01" value={loadTons} onChange={e => setLoadTons(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs outline-none" placeholder="Peso"/>
-                            <input type="number" step="0.1" value={loadTemp} onChange={e => setLoadTemp(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs" placeholder="Temp"/>
+                            <input type="text" inputMode="decimal" value={loadTons} onChange={e => setLoadTons(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs outline-none" placeholder="Peso"/>
+                            <input type="text" inputMode="decimal" value={loadTemp} onChange={e => setLoadTemp(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs" placeholder="Temp"/>
                         </div>
                         <button type="button" onClick={handleAddLoad} className="w-full bg-orange-600/80 text-white text-xs font-bold py-2 rounded mb-3">Adicionar Carga</button>
                         <div className="flex-1 overflow-y-auto max-h-48 border border-slate-700 rounded bg-brand-secondary">
@@ -363,22 +414,22 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                     </div>
                     <div className="lg:col-span-3 bg-brand-primary p-4 rounded-lg border border-slate-700 space-y-3">
                         <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-2">Produção</h5>
-                        <input type="number" step="0.01" value={prodGross} onChange={e => setProdGross(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Bruta (t)" required/>
-                        <input type="number" step="0.01" value={prodWaste} onChange={e => setProdWaste(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Rejeito (t)"/>
+                        <input type="text" inputMode="decimal" value={prodGross} onChange={e => setProdGross(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Bruta (t)" required/>
+                        <input type="text" inputMode="decimal" value={prodWaste} onChange={e => setProdWaste(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Rejeito (t)"/>
                         <div className="bg-slate-700/50 p-3 rounded text-center border border-slate-600 mt-4"><span className="block text-xs text-brand-muted uppercase">Líquida</span><span className="text-2xl font-bold text-green-400">{currentNetProduction.toFixed(2)} t</span></div>
                     </div>
                     <div className="lg:col-span-3 bg-brand-primary p-4 rounded-lg border border-slate-700 space-y-3">
                         <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-2">Consumo</h5>
-                        <input type="number" step="0.01" value={prodCap} onChange={e => setProdCap(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="CAP (t)"/>
-                        <input type="number" step="0.01" value={prodBrita1} onChange={e => setProdBrita1(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Brita 1 (t)"/>
-                        <input type="number" step="0.01" value={prodBrita0} onChange={e => setProdBrita0(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Brita 0 (t)"/>
-                        <input type="number" step="0.01" value={prodDust} onChange={e => setProdDust(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Pó de Pedra (t)"/>
+                        <input type="text" inputMode="decimal" value={prodCap} onChange={e => setProdCap(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="CAP (t)"/>
+                        <input type="text" inputMode="decimal" value={prodBrita1} onChange={e => setProdBrita1(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Brita 1 (t)"/>
+                        <input type="text" inputMode="decimal" value={prodBrita0} onChange={e => setProdBrita0(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Brita 0 (t)"/>
+                        <input type="text" inputMode="decimal" value={prodDust} onChange={e => setProdDust(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Pó de Pedra (t)"/>
                     </div>
                     <div className="lg:col-span-2 bg-brand-primary p-4 rounded-lg border border-slate-700 flex flex-col justify-between">
                          <div className="space-y-3">
                             <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-2">Horas</h5>
-                            <input type="number" step="0.1" value={prodInitialHM} onChange={e => setProdInitialHM(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Inicial" required/>
-                            <input type="number" step="0.1" value={prodFinalHM} onChange={e => setProdFinalHM(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Final" required/>
+                            <input type="text" inputMode="decimal" value={prodInitialHM} onChange={e => setProdInitialHM(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Inicial" required/>
+                            <input type="text" inputMode="decimal" value={prodFinalHM} onChange={e => setProdFinalHM(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Final" required/>
                             <div className="text-center text-xs text-brand-muted mt-2 border-t border-slate-600 pt-2">Horas Trab.<br /><span className="text-brand-light font-bold text-lg">{currentHours.toFixed(1)} h</span></div>
                          </div>
                          <button type="submit" className="w-full mt-4 bg-orange-500 text-brand-primary font-bold py-3 rounded shadow-lg">Salvar Produção</button>
@@ -411,7 +462,8 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                                 {isCustomProduct ? <XMarkIcon className="w-5 h-5"/> : <PlusIcon className="w-5 h-5"/>}
                             </button>
                         </div>
-                        <input type="number" step="0.01" value={newTons} onChange={(e) => setNewTons(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Peso (t)" required/>
+                        <input type="date" value={newAggregateDate} onChange={(e) => setNewAggregateDate(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none"/>
+                        <input type="text" inputMode="decimal" value={newTons} onChange={(e) => setNewTons(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Peso (t) - ex: 33,55" required/>
                         <input type="text" value={newTicket} onChange={(e) => setNewTicket(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 outline-none" placeholder="Ticket/NF" required/>
                         <button type="submit" className="w-full bg-brand-accent text-brand-primary font-bold py-2 rounded">Registrar</button>
                     </form>

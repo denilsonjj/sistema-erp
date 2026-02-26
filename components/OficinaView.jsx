@@ -59,10 +59,11 @@ const calculateWorkingHours = (startDateStr, startTimeStr) => {
     }
     return totalMinutes / 60;
 };
-const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleasedMachines, onSelectMachine, onUpdateMachineStatus, onOpenOficinaEditModal, onResolveIssue, onOpenMaintenanceModal, }) => {
+const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleasedMachines, notifications = [], onSelectMachine, onUpdateMachineStatus, onOpenOficinaEditModal, onResolveIssue, onOpenMaintenanceModal, }) => {
     const [openStatusPopoverId, setOpenStatusPopoverId] = useState(null);
     const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0 });
     const popoverRef = useRef(null);
+    const handleScrollClose = useRef(() => setOpenStatusPopoverId(null));
     const [sortConfig, setSortConfig] = useState({ key: 'daysStopped', direction: 'descending' });
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -72,11 +73,11 @@ const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleased
         };
         if (openStatusPopoverId) {
             document.addEventListener('mousedown', handleClickOutside);
-            window.addEventListener('scroll', () => setOpenStatusPopoverId(null), true);
+            window.addEventListener('scroll', handleScrollClose.current, true);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
-            window.removeEventListener('scroll', () => setOpenStatusPopoverId(null), true);
+            window.removeEventListener('scroll', handleScrollClose.current, true);
         };
     }, [openStatusPopoverId]);
     const toggleStatusPopover = (e, machineId) => {
@@ -85,9 +86,24 @@ const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleased
         }
         else {
             const rect = e.currentTarget.getBoundingClientRect();
+            const popoverWidth = 192;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const minMargin = 12;
+            const statusCount = Object.values(MachineStatus).length;
+            const estimatedPopoverHeight = Math.min((viewportHeight * 0.7), 52 + statusCount * 42);
+            let top = rect.bottom + 5;
+            if (top + estimatedPopoverHeight > viewportHeight - minMargin)
+                top = viewportHeight - estimatedPopoverHeight - minMargin;
+            if (top < minMargin)
+                top = minMargin;
+            const minLeft = (popoverWidth / 2) + minMargin;
+            const maxLeft = viewportWidth - (popoverWidth / 2) - minMargin;
+            const rawLeft = rect.left + (rect.width / 2);
+            const left = Math.min(Math.max(rawLeft, minLeft), Math.max(maxLeft, minLeft));
             setPopoverCoords({
-                top: rect.bottom + 5,
-                left: rect.left + rect.width / 2
+                top,
+                left
             });
             setOpenStatusPopoverId(machineId);
         }
@@ -211,7 +227,7 @@ const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleased
           <table className="min-w-full text-xs text-left text-brand-muted">
             <thead className="bg-brand-primary text-xs uppercase font-black">
               <tr>
-                <th className="px-4 py-4">Prefixo</th>
+                <th className="px-4 py-4 w-28 min-w-[112px]">Prefixo</th>
                 <th className="px-4 py-4">Equipamento</th>
                 <th className="px-4 py-4 text-center">Status</th>
                 <th className="px-4 py-4"><button onClick={() => setSortConfig({ key: 'statusChangeDate', direction: sortConfig?.direction === 'ascending' ? 'descending' : 'ascending' })} className="flex items-center gap-1">Entrada {getSortIcon('statusChangeDate')}</button></th>
@@ -226,7 +242,7 @@ const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleased
               {sortedMachines.map(machine => {
             const durationString = calculateDurationString(machine.statusChangeDate, machine.lastStatusChangeTime);
             return (<tr key={machine.id} className="hover:bg-slate-700/50 transition-colors">
-                      <td className="px-4 py-4 font-black text-brand-accent uppercase">{machine.prefix}</td>
+                      <td className="px-4 py-4 font-black text-brand-accent uppercase font-mono whitespace-nowrap w-28 min-w-[112px]">{machine.prefix}</td>
                       <td className="px-4 py-4 font-bold text-brand-light cursor-pointer hover:text-brand-accent" onClick={() => onSelectMachine(machine)}>{machine.name} {machine.model}</td>
                       <td className="px-4 py-4 text-center">
                           <button onClick={(e) => toggleStatusPopover(e, machine.id)} className="focus:outline-none">
@@ -272,11 +288,11 @@ const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleased
               <HistoryIcon className="w-6 h-6 text-blue-400"/>
               Linha do Tempo de Atividades
           </h3>
-          <WorkshopActivityTimeline machines={allMachines} limit={10}/>
+          <WorkshopActivityTimeline machines={allMachines} limit={10} activityFeed={notifications}/>
       </div>
 
       {/* FLOATING MACHINE STATUS MENU */}
-      {openStatusPopoverId && (<div ref={popoverRef} className="fixed z-[100] w-48 bg-brand-primary border border-slate-600 rounded-lg shadow-2xl p-1 animate-in zoom-in-95 duration-100" style={{ top: `${popoverCoords.top}px`, left: `${popoverCoords.left}px`, transform: 'translateX(-50%)' }}>
+      {openStatusPopoverId && (<div ref={popoverRef} className="fixed z-[100] w-48 max-h-[70vh] overflow-y-auto bg-brand-primary border border-slate-600 rounded-lg shadow-2xl p-1 animate-in zoom-in-95 duration-100" style={{ top: `${popoverCoords.top}px`, left: `${popoverCoords.left}px`, transform: 'translateX(-50%)' }}>
               <div className="py-1.5 px-3 mb-1 border-b border-slate-700">
                   <p className="text-[9px] font-black text-brand-muted uppercase tracking-widest">Mudar Status</p>
               </div>

@@ -23,7 +23,7 @@ const PERMISSION_OPTIONS = [
     { key: 'viewPontes', label: 'Pontes' },
     { key: 'viewUsina', label: 'Usina de Asfalto' },
     { key: 'editBancoDados', label: 'Banco de Dados' },
-    { key: 'editConfiguracoes', label: 'Configuracoes' }
+    { key: 'editConfiguracoes', label: 'Configurações' }
 ];
 
 const ConfiguracoesView = ({
@@ -100,7 +100,7 @@ const ConfiguracoesView = ({
     const handleSaveEdit = async (event) => {
         event.preventDefault();
         if (!editingUser) {
-            setFormError('Selecione um usuario existente para editar.');
+            setFormError('Selecione um usuário existente para editar.');
             return;
         }
         setFormError('');
@@ -140,7 +140,7 @@ const ConfiguracoesView = ({
     const handleStatusToggle = async (targetUser) => {
         setFormError('');
         const actionLabel = targetUser.isActive === false ? 'ativar' : 'desativar';
-        if (!window.confirm(`Deseja ${actionLabel} este usuario?`)) {
+        if (!window.confirm(`Deseja ${actionLabel} este usuário?`)) {
             return;
         }
         const result = await onToggleUserStatus(targetUser);
@@ -151,7 +151,7 @@ const ConfiguracoesView = ({
 
     const handleDelete = async (targetUser) => {
         setFormError('');
-        if (!window.confirm(`Excluir usuario ${targetUser.name}? Essa acao remove o login.`)) {
+        if (!window.confirm(`Excluir usuário ${targetUser.name}? Essa ação remove o login.`)) {
             return;
         }
         const result = await onDeleteUser(targetUser);
@@ -167,13 +167,13 @@ const ConfiguracoesView = ({
                     <div>
                         <h3 className="text-lg font-semibold text-brand-light flex items-center gap-2">
                             <UsersIcon className="w-6 h-6 text-brand-accent" />
-                            Gerenciamento de Usuarios
+                            Gerenciamento de Usuários
                         </h3>
                         <p className="text-sm text-brand-muted mt-1">
-                            CRUD basico de usuarios com limite de 25 ativos.
+                            CRUD básico de usuários com limite de 25 ativos.
                         </p>
                         <p className="text-xs text-brand-muted mt-1">
-                            {activeUsersCount}/{MAX_USERS} usuarios ativos.
+                            {activeUsersCount}/{MAX_USERS} usuários ativos.
                         </p>
                         <label className="mt-2 inline-flex items-center gap-2 text-xs text-brand-muted cursor-pointer">
                             <input
@@ -182,7 +182,7 @@ const ConfiguracoesView = ({
                                 onChange={(event) => onToggleNotificationSound?.(event.target.checked)}
                                 className="rounded border-slate-600 text-brand-accent focus:ring-brand-accent bg-brand-secondary"
                             />
-                            Som de notificacoes
+                            Som de notificações
                         </label>
                     </div>
                     <div className="flex gap-2">
@@ -192,7 +192,7 @@ const ConfiguracoesView = ({
                             className="font-bold py-2 px-4 rounded-lg transition-colors shadow-md bg-green-600 text-white hover:bg-green-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             <PlusIcon className="w-4 h-4" />
-                            Novo Usuario
+                            Novo Usuário
                         </button>
                         <button
                             onClick={onRefreshUsers}
@@ -215,18 +215,18 @@ const ConfiguracoesView = ({
                         <thead className="bg-brand-primary text-xs uppercase">
                             <tr>
                                 <th className="px-4 py-3">Nome</th>
-                                <th className="px-4 py-3">Funcao</th>
+                                <th className="px-4 py-3">Função</th>
                                 <th className="px-4 py-3">Email/Login</th>
                                 <th className="px-4 py-3">Obra</th>
                                 <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3">Permissoes</th>
-                                <th className="px-4 py-3 text-right">Acoes</th>
+                                <th className="px-4 py-3">Permissões</th>
+                                <th className="px-4 py-3 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {users.map((user) => {
                                 const obraName = user.allowedObraId && user.allowedObraId !== 'all'
-                                    ? obraMap.get(user.allowedObraId) || 'Obra nao encontrada'
+                                    ? obraMap.get(user.allowedObraId) || 'Obra não encontrada'
                                     : 'Todas as Obras';
                                 return (
                                     <tr key={user.id} className="border-b border-brand-primary hover:bg-slate-700 transition-colors">
@@ -274,7 +274,7 @@ const ConfiguracoesView = ({
                                                 onClick={() => handleDelete(user)}
                                                 disabled={isSaving || user.id === currentUserId}
                                                 className="p-2 text-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Excluir usuario"
+                                                title="Excluir usuário"
                                             >
                                                 <TrashIcon />
                                             </button>
@@ -285,7 +285,7 @@ const ConfiguracoesView = ({
                             {!users.length && !isLoading && (
                                 <tr>
                                     <td className="px-4 py-6 text-center text-brand-muted" colSpan={7}>
-                                        Nenhum usuario encontrado.
+                                        Nenhum usuário encontrado.
                                     </td>
                                 </tr>
                             )}
@@ -300,7 +300,7 @@ const ConfiguracoesView = ({
                         <div className="flex justify-between items-center mb-4 border-b border-slate-600 pb-2">
                             <h2 className="text-xl font-bold text-brand-light flex items-center gap-2">
                                 <PencilIcon className="w-5 h-5" />
-                                Editar Usuario
+                                Editar Usuário
                             </h2>
                         </div>
 
@@ -317,7 +317,7 @@ const ConfiguracoesView = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-brand-muted mb-1">Funcao / Cargo</label>
+                                    <label className="block text-sm font-medium text-brand-muted mb-1">Função / Cargo</label>
                                     <input
                                         type="text"
                                         value={role}
@@ -327,7 +327,7 @@ const ConfiguracoesView = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-brand-muted mb-1">Acesso a Obra</label>
+                                    <label className="block text-sm font-medium text-brand-muted mb-1">Acesso à Obra</label>
                                     <div className="relative">
                                         <select
                                             value={allowedObraId}
@@ -349,7 +349,7 @@ const ConfiguracoesView = ({
                             <div className="mt-6">
                                 <h4 className="text-sm font-semibold text-brand-light mb-3 flex items-center gap-2">
                                     <ShieldIcon className="w-4 h-4 text-brand-accent" />
-                                    Permissoes
+                                    Permissões
                                 </h4>
                                 <div className="bg-brand-primary p-4 rounded-md border border-slate-600 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {PERMISSION_OPTIONS.map((permission) => (
@@ -379,7 +379,7 @@ const ConfiguracoesView = ({
                                     disabled={isSaving}
                                     className="px-4 py-2 bg-brand-accent text-brand-primary font-semibold rounded-md hover:bg-amber-300 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
-                                    {isSaving ? 'Salvando...' : 'Salvar Usuario'}
+                                    {isSaving ? 'Salvando...' : 'Salvar Usuário'}
                                 </button>
                             </div>
                         </form>
@@ -393,7 +393,7 @@ const ConfiguracoesView = ({
                         <div className="flex justify-between items-center mb-4 border-b border-slate-600 pb-2">
                             <h2 className="text-xl font-bold text-brand-light flex items-center gap-2">
                                 <PlusIcon className="w-5 h-5" />
-                                Novo Usuario
+                                Novo Usuário
                             </h2>
                         </div>
 
@@ -408,7 +408,7 @@ const ConfiguracoesView = ({
                                         className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded-md p-2 focus:ring-2 focus:ring-brand-accent focus:outline-none"
                                         required
                                     />
-                                    <p className="mt-1 text-[11px] text-brand-muted">Obrigatorio: login apenas por email.</p>
+                                    <p className="mt-1 text-[11px] text-brand-muted">Obrigatório: login apenas por e-mail.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-brand-muted mb-1">Senha</label>
@@ -432,7 +432,7 @@ const ConfiguracoesView = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-brand-muted mb-1">Funcao / Cargo</label>
+                                    <label className="block text-sm font-medium text-brand-muted mb-1">Função / Cargo</label>
                                     <input
                                         type="text"
                                         value={newRole}
@@ -442,7 +442,7 @@ const ConfiguracoesView = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-brand-muted mb-1">Acesso a Obra</label>
+                                    <label className="block text-sm font-medium text-brand-muted mb-1">Acesso à Obra</label>
                                     <div className="relative">
                                         <select
                                             value={newAllowedObraId}
@@ -469,14 +469,14 @@ const ConfiguracoesView = ({
                                         onChange={() => setNewIsAdmin((prev) => !prev)}
                                         className="rounded border-slate-600 text-brand-accent focus:ring-brand-accent bg-brand-secondary"
                                     />
-                                    Usuario administrador
+                                    Usuário administrador
                                 </label>
                             </div>
 
                             <div className="mt-6">
                                 <h4 className="text-sm font-semibold text-brand-light mb-3 flex items-center gap-2">
                                     <ShieldIcon className="w-4 h-4 text-brand-accent" />
-                                    Permissoes
+                                    Permissões
                                 </h4>
                                 <div className="bg-brand-primary p-4 rounded-md border border-slate-600 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {PERMISSION_OPTIONS.map((permission) => (
@@ -506,7 +506,7 @@ const ConfiguracoesView = ({
                                     disabled={isSaving}
                                     className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
-                                    {isSaving ? 'Criando...' : 'Criar Usuario'}
+                                    {isSaving ? 'Criando...' : 'Criar Usuário'}
                                 </button>
                             </div>
                         </form>

@@ -49,7 +49,7 @@ const Sidebar = ({ activeView, setActiveView, isSidebarOpen, setSidebarOpen, use
         { view: 'Pontes', label: 'Pontes', icon: <BridgeIcon />, permissionKey: 'viewPontes' },
         { view: 'Usina', label: 'Usina de Asfalto', icon: <FactoryIcon />, permissionKey: 'viewUsina' },
         { view: 'Banco de Dados', label: 'Banco de Dados', icon: <DatabaseIcon />, permissionKey: 'editBancoDados' },
-        { view: 'Configuracoes', label: 'Configuracoes', icon: <CogIcon />, permissionKey: 'editConfiguracoes' }
+        { view: 'Configuracoes', label: 'Configurações', icon: <CogIcon />, permissionKey: 'editConfiguracoes' }
     ];
 
     const visibleNavItems = allNavItems.filter((item) => userPermissions[item.permissionKey]);

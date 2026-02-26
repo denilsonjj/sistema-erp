@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BridgeIcon, CubeIcon, PlusIcon, TrashIcon, PencilIcon, ChartIcon, UserGroupIcon, BookOpenIcon, SunIcon, CloudIcon, CloudRainIcon, ShoppingCartIcon, GraderIcon, XMarkIcon, PrinterIcon, BuildingIcon, BriefcaseIcon } from './icons';
 import MetricCard from './MetricCard';
 import { jsPDF } from 'jspdf';
@@ -55,7 +55,7 @@ const calculateFoodChargeDays = (employee, rangeStartStr, rangeEndStr) => {
 };
 const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 const getTodayDateKey = () => new Date().toISOString().split('T')[0];
-// VariÃ¡vel de controle fora do componente para persistir durante a sessÃ£o (troca de abas) mas reiniciar no refresh
+// Variável de controle fora do componente para persistir durante a sessão (troca de abas) mas reiniciar no refresh
 let hasAppliedSundayRule = false;
 // --- MODAIS INTERNOS ---
 const TerminationModal = ({ isOpen, onClose, onConfirm }) => {
@@ -65,10 +65,10 @@ const TerminationModal = ({ isOpen, onClose, onConfirm }) => {
     return (<div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[120] p-4">
             <div className="bg-brand-secondary p-6 rounded-2xl w-full max-w-md border border-slate-700 shadow-2xl animate-in zoom-in-95 duration-200">
                 <h3 className="text-lg font-bold text-red-400 mb-2 flex items-center gap-2">
-                    <TrashIcon className="w-5 h-5"/> Confirmar DemissÃ£o
+                    <TrashIcon className="w-5 h-5"/> Confirmar Demissão
                 </h3>
                 <p className="text-xs text-brand-muted mb-4 leading-relaxed">
-                    O funcionÃ¡rio serÃ¡ removido do quadro atual. Se o valor do acerto jÃ¡ foi calculado pelo RH, insira abaixo. Caso contrÃ¡rio, selecione "Confirmar Depois".
+                    O funcionário será removido do quadro atual. Se o valor do acerto já foi calculado pelo RH, insira abaixo. Caso contrário, selecione "Confirmar Depois".
                 </p>
                 
                 <label className="block text-xs font-bold text-brand-light uppercase mb-1">Valor do Acerto (R$)</label>
@@ -105,7 +105,7 @@ const SeverancePayModal = ({ isOpen, onClose, employeeName, onSave }) => {
     return (<div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[120] p-4">
             <div className="bg-brand-secondary p-6 rounded-2xl w-full max-w-sm border border-slate-700 shadow-2xl animate-in zoom-in-95 duration-200 border-t-4 border-yellow-500">
                 <h3 className="text-lg font-bold text-brand-light mb-1 flex items-center gap-2">
-                    <BriefcaseIcon className="w-5 h-5 text-yellow-400"/> LanÃ§ar Acerto RescisÃ³rio
+                    <BriefcaseIcon className="w-5 h-5 text-yellow-400"/> Lançar Acerto Rescisório
                 </h3>
                 <p className="text-xs text-brand-muted mb-4">Colaborador: <span className="text-brand-light font-bold">{employeeName}</span></p>
                 
@@ -121,7 +121,7 @@ const SeverancePayModal = ({ isOpen, onClose, employeeName, onSave }) => {
                 onClose();
             }
         }} className="bg-yellow-500 text-brand-primary px-6 py-2 rounded-lg font-black uppercase text-xs hover:bg-yellow-400 shadow-lg">
-                        Salvar LanÃ§amento
+                        Salvar Lançamento
                     </button>
                 </div>
             </div>
@@ -168,12 +168,12 @@ const FixedCostsModal = ({ isOpen, onClose, projectId, currentCosts, onSave }) =
                 
                 <div className="bg-brand-primary p-4 rounded-lg mb-4 space-y-3 border border-slate-700">
                     <div className="grid grid-cols-2 gap-3">
-                        <input type="text" placeholder="DescriÃ§Ã£o (Ex: Internet Starlink)" value={newDesc} onChange={e => setNewDesc(e.target.value)} className="col-span-2 w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 text-xs outline-none"/>
+                        <input type="text" placeholder="Descrição (Ex: Internet Starlink)" value={newDesc} onChange={e => setNewDesc(e.target.value)} className="col-span-2 w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 text-xs outline-none"/>
                         <input type="number" placeholder="Valor (R$)" value={newValue} onChange={e => setNewValue(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 text-xs outline-none"/>
                         <select value={newType} onChange={e => setNewType(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-2 text-xs outline-none">
                             <option value="Mensal">Mensal</option>
-                            <option value="DiÃ¡rio">DiÃ¡rio</option>
-                            <option value="Ãšnico">Ãšnico</option>
+                            <option value="Diário">Diário</option>
+                            <option value="Único">Único</option>
                         </select>
                     </div>
                     <button onClick={handleAdd} className="w-full bg-green-600 text-white font-bold py-2 rounded text-xs uppercase hover:bg-green-500">Adicionar Custo</button>
@@ -195,7 +195,7 @@ const FixedCostsModal = ({ isOpen, onClose, projectId, currentCosts, onSave }) =
 
                 <div className="flex justify-end gap-2 border-t border-slate-700 pt-4">
                     <button onClick={onClose} className="px-4 py-2 text-brand-muted font-bold hover:text-white text-xs">Cancelar</button>
-                    <button onClick={handleSave} className="bg-brand-accent text-brand-primary px-6 py-2 rounded-lg font-black uppercase text-xs hover:brightness-110">Salvar AlteraÃ§Ãµes</button>
+                    <button onClick={handleSave} className="bg-brand-accent text-brand-primary px-6 py-2 rounded-lg font-black uppercase text-xs hover:brightness-110">Salvar Alterações</button>
                 </div>
             </div>
         </div>);
@@ -231,7 +231,7 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
             daysInRange = Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
         }
         const dailySalary = emp.salary / 30;
-        // Regra de alimentaÃ§Ã£o: SÃ³ conta se NÃƒO estiver de baixada ou demitido
+        // Regra de alimentação: Só conta se NÃO estiver de baixada ou demitido
         const dailyFood = (emp.breakfastCost || 0) + (emp.lunchCost || 0) + (emp.dinnerCost || 0);
         const foodDays = calculateFoodChargeDays(emp, startDate, endDate);
         const totalCost = (daysInRange * dailySalary) + (foodDays * dailyFood) + (emp.totalAdditionalCost || 0);
@@ -243,17 +243,17 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
         const doc = new jsPDF();
         // Header
         doc.setFontSize(18);
-        doc.text("RelatÃ³rio de Custos - Obra de Arte Especial", 14, 20);
+        doc.text("Relatório de Custos - Obra de Arte Especial", 14, 20);
         doc.setFontSize(10);
         doc.text(`Projeto: ${project.name}`, 14, 28);
-        doc.text(`PerÃ­odo: ${new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 34);
+        doc.text(`Período: ${new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 34);
         // Summary
         autoTable(doc, {
             startY: 40,
             head: [['Categoria', 'Custo Total (R$)']],
             body: [
                 ['Materiais', formatCurrency(totalMaterials)],
-                ['MÃ£o de Obra', formatCurrency(totalLabor)],
+                ['Mão de Obra', formatCurrency(totalLabor)],
                 ['Equipamentos', formatCurrency(totalEquipment)],
                 ['TOTAL GERAL', formatCurrency(totalGeneral)]
             ],
@@ -286,7 +286,7 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
         });
         autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 12,
-            head: [['Data', 'Equipamento', 'Custo DiÃ¡ria']],
+            head: [['Data', 'Equipamento', 'Custo Diária']],
             body: equipRows,
             styles: { fontSize: 8 }
         });
@@ -297,7 +297,7 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
                 <div className="bg-slate-100 p-4 border-b flex justify-between items-center shrink-0">
                     <div>
                         <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <PrinterIcon className="w-6 h-6 text-brand-logo"/> RelatÃ³rio Financeiro do Projeto
+                            <PrinterIcon className="w-6 h-6 text-brand-logo"/> Relatório Financeiro do Projeto
                         </h2>
                         <p className="text-xs text-slate-500 uppercase tracking-widest">{project.name}</p>
                     </div>
@@ -306,7 +306,7 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
 
                 <div className="bg-white p-4 border-b flex flex-wrap gap-4 items-center shrink-0">
                     <div className="flex flex-col">
-                        <label className="text-[10px] uppercase font-bold text-slate-400">InÃ­cio</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-400">Início</label>
                         <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="border rounded p-1 text-sm text-slate-700 font-bold"/>
                     </div>
                     <div className="flex flex-col">
@@ -324,12 +324,12 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
                     <div className="bg-white shadow-sm border p-8 min-h-[800px] max-w-3xl mx-auto">
                         <div className="border-b-2 border-slate-800 pb-4 mb-8 flex justify-between items-end">
                             <div>
-                                <h1 className="text-2xl font-black uppercase text-slate-900">RelatÃ³rio de Custos</h1>
+                                <h1 className="text-2xl font-black uppercase text-slate-900">Relatório de Custos</h1>
                                 <p className="text-sm font-medium text-slate-500">{project.name}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs font-bold text-slate-400 uppercase">PerÃ­odo</p>
-                                <p className="text-sm font-bold text-slate-800">{new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} atÃ© {new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase">Período</p>
+                                <p className="text-sm font-bold text-slate-800">{new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                             </div>
                         </div>
 
@@ -339,7 +339,7 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
                                 <span className="text-lg font-bold text-green-600">{formatCurrency(totalMaterials)}</span>
                             </div>
                             <div className="bg-slate-100 p-3 rounded border">
-                                <span className="text-[9px] uppercase font-bold text-slate-400 block">MÃ£o de Obra</span>
+                                <span className="text-[9px] uppercase font-bold text-slate-400 block">Mão de Obra</span>
                                 <span className="text-lg font-bold text-blue-600">{formatCurrency(totalLabor)}</span>
                             </div>
                             <div className="bg-slate-100 p-3 rounded border">
@@ -357,13 +357,13 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
                             <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Data</th><th className="p-2">Material</th><th className="p-2 text-right">Valor Total</th></tr></thead>
                             <tbody>
                                 {filteredMaterials.map(m => (<tr key={m.id} className="border-b border-slate-100"><td className="p-2">{new Date(m.receiptDate + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td className="p-2">{m.material} <span className="text-slate-400">({m.quantity}{m.unit})</span></td><td className="p-2 text-right font-mono">{formatCurrency(m.totalValue)}</td></tr>))}
-                                {filteredMaterials.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros no perÃ­odo.</td></tr>}
+                                {filteredMaterials.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros no período.</td></tr>}
                             </tbody>
                         </table>
 
-                        <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">MÃ£o de Obra (Proporcional ao PerÃ­odo)</h3>
+                        <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">Mão de Obra (Proporcional ao Período)</h3>
                         <table className="w-full text-xs text-left mb-8">
-                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Colaborador</th><th className="p-2 text-center">Dias no PerÃ­odo</th><th className="p-2 text-right">Custo AprÃ³x.</th></tr></thead>
+                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Colaborador</th><th className="p-2 text-center">Dias no Período</th><th className="p-2 text-right">Custo Apróx.</th></tr></thead>
                             <tbody>
                                 {laborDetails.map(emp => (<tr key={emp.id} className="border-b border-slate-100"><td className="p-2">{emp.name} <span className="text-slate-400">({emp.role})</span></td><td className="p-2 text-center">{emp.daysInRange}</td><td className="p-2 text-right font-mono">{formatCurrency(emp.totalCost)}</td></tr>))}
                             </tbody>
@@ -371,14 +371,14 @@ const BridgeReportModal = ({ isOpen, onClose, project, materials, employees, dai
 
                         <h3 className="text-xs font-black uppercase border-b mb-3 pb-1 mt-8">Apontamento de Equipamentos</h3>
                         <table className="w-full text-xs text-left mb-8">
-                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Data</th><th className="p-2">Equipamento</th><th className="p-2 text-right">Custo DiÃ¡ria</th></tr></thead>
+                            <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Data</th><th className="p-2">Equipamento</th><th className="p-2 text-right">Custo Diária</th></tr></thead>
                             <tbody>
                                 {equipmentDetails.map((item, idx) => (<tr key={idx} className="border-b border-slate-100">
                                         <td className="p-2">{new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                                         <td className="p-2">{item.prefix}</td>
                                         <td className="p-2 text-right font-mono">{formatCurrency(item.cost)}</td>
                                     </tr>))}
-                                {equipmentDetails.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros de equipamentos no perÃ­odo.</td></tr>}
+                                {equipmentDetails.length === 0 && <tr><td colSpan={3} className="p-4 text-center italic text-slate-400">Sem registros de equipamentos no período.</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -395,12 +395,12 @@ const ProjectModal = ({ isOpen, onClose, onSave }) => {
             <div className="bg-brand-secondary p-6 rounded-2xl w-full max-w-md border border-slate-700 shadow-2xl">
                 <h3 className="text-lg font-bold text-brand-light mb-4">Novo Projeto de Ponte</h3>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Nome do Projeto..." className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-3 mb-3 outline-none focus:border-brand-accent"/>
-                <label className="text-xs text-brand-muted uppercase font-bold mb-1 block">Data de InÃ­cio</label>
+                <label className="text-xs text-brand-muted uppercase font-bold mb-1 block">Data de Início</label>
                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-3 mb-4 outline-none focus:border-brand-accent"/>
                 <div className="flex justify-end gap-2">
                     <button onClick={onClose} className="px-4 py-2 text-brand-muted font-bold hover:text-white">Cancelar</button>
                     <button onClick={() => { if (name) {
-        onSave(name, 'Em ExecuÃ§Ã£o', startDate);
+        onSave(name, 'Em Execução', startDate);
         onClose();
         setName('');
     } }} className="bg-brand-accent text-brand-primary px-6 py-2 rounded-lg font-black uppercase text-xs hover:brightness-110">Criar</button>
@@ -489,26 +489,26 @@ const EmployeeModal = ({ isOpen, onClose, onSave, projects, workers, initialProj
                             <input type="text" value={formData.name} readOnly className="w-full bg-slate-800 border border-slate-700 text-brand-muted rounded p-2 outline-none text-xs cursor-not-allowed"/>
                         </div>
                         <div>
-                            <label className="text-[10px] text-brand-muted uppercase font-bold">FunÃ§Ã£o (Auto)</label>
+                            <label className="text-[10px] text-brand-muted uppercase font-bold">Função (Auto)</label>
                             <input type="text" value={formData.role} readOnly className="w-full bg-slate-800 border border-slate-700 text-brand-muted rounded p-2 outline-none text-xs cursor-not-allowed"/>
                         </div>
                     </div>
 
-                    <input type="number" placeholder="SalÃ¡rio Mensal (R$)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none"/>
+                    <input type="number" placeholder="Salário Mensal (R$)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none"/>
                     <div>
-                        <label className="text-[10px] text-brand-muted uppercase font-bold">Data de InÃ­cio</label>
+                        <label className="text-[10px] text-brand-muted uppercase font-bold">Data de Início</label>
                         <input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none"/>
                     </div>
                     
                     <div className="pt-2 border-t border-slate-700">
-                        <label className="text-[10px] text-brand-accent uppercase font-bold mb-2 block">Custos DiÃ¡rios de AlimentaÃ§Ã£o (R$)</label>
+                        <label className="text-[10px] text-brand-accent uppercase font-bold mb-2 block">Custos Diários de Alimentação (R$)</label>
                         <div className="grid grid-cols-3 gap-2">
                             <div>
-                                <label className="text-[9px] text-brand-muted uppercase block">CafÃ©</label>
+                                <label className="text-[9px] text-brand-muted uppercase block">Café</label>
                                 <input type="number" value={formData.breakfastCost} onChange={e => setFormData({ ...formData, breakfastCost: e.target.value })} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none text-xs"/>
                             </div>
                             <div>
-                                <label className="text-[9px] text-brand-muted uppercase block">AlmoÃ§o</label>
+                                <label className="text-[9px] text-brand-muted uppercase block">Almoço</label>
                                 <input type="number" value={formData.lunchCost} onChange={e => setFormData({ ...formData, lunchCost: e.target.value })} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none text-xs"/>
                             </div>
                             <div>
@@ -617,7 +617,7 @@ const MaterialModal = ({ isOpen, onClose, onSave, projectId, initialData }) => {
                 </div>
                 <div className="flex justify-end gap-2 mt-6 border-t border-slate-700 pt-4">
                     <button onClick={onClose} className="px-4 py-2 text-brand-muted font-bold hover:text-white">Cancelar</button>
-                    <button onClick={handleSubmit} className="bg-teal-600 text-white px-6 py-2 rounded-lg font-bold text-xs hover:bg-teal-500 uppercase">{initialData ? 'Salvar Edicao' : 'Salvar Material'}</button>
+                    <button onClick={handleSubmit} className="bg-teal-600 text-white px-6 py-2 rounded-lg font-bold text-xs hover:bg-teal-500 uppercase">{initialData ? 'Salvar Edição' : 'Salvar Material'}</button>
                 </div>
             </div>
         </div>);
@@ -677,14 +677,14 @@ const DailyLogModal = ({ isOpen, onClose, onSave, projectId, machines, initialDa
     };
     return (<div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
             <div className="bg-brand-secondary p-6 rounded-2xl w-full max-w-2xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
-                <h3 className="text-lg font-bold text-brand-light mb-4">{initialData ? 'Editar Diario de Obra' : 'Novo Diario de Obra'}</h3>
+                <h3 className="text-lg font-bold text-brand-light mb-4">{initialData ? 'Editar Diário de Obra' : 'Novo Diário de Obra'}</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label className="text-xs text-brand-muted font-bold">Data</label>
                         <input type="date" value={logData.date} onChange={e => setLogData({ ...logData, date: e.target.value })} disabled={!!initialData} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none disabled:opacity-60 disabled:cursor-not-allowed"/>
-                        {initialData && <p className="text-[10px] text-brand-muted mt-1">Edicao liberada somente no proprio dia.</p>}
+                        {initialData && <p className="text-[10px] text-brand-muted mt-1">Edição liberada somente no próprio dia.</p>}
                     </div>
-                    <div><label className="text-xs text-brand-muted font-bold">Clima</label><select value={logData.weather} onChange={e => setLogData({ ...logData, weather: e.target.value })} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none"><option value="Sol">Sol</option><option value="Nublado">Nublado</option><option value="Chuva">Chuva</option><option value="Impraticavel">Impraticavel</option></select></div>
+                    <div><label className="text-xs text-brand-muted font-bold">Clima</label><select value={logData.weather} onChange={e => setLogData({ ...logData, weather: e.target.value })} className="w-full bg-brand-primary border border-slate-600 text-brand-light rounded p-2 outline-none"><option value="Sol">Sol</option><option value="Nublado">Nublado</option><option value="Chuva">Chuva</option><option value="Impraticavel">Impraticável</option></select></div>
                 </div>
                 <div className="mb-4">
                     <label className="text-xs text-brand-muted font-bold">Descricao das Atividades</label>
@@ -697,7 +697,7 @@ const DailyLogModal = ({ isOpen, onClose, onSave, projectId, machines, initialDa
                             <option value="">Selecione...</option>
                             {machines.map(m => <option key={m.id} value={m.id}>{m.prefix} - {m.name}</option>)}
                         </select>
-                        <input type="number" placeholder="Custo Diario (R$)" value={equipCost} onChange={e => setEquipCost(e.target.value)} className="w-32 bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs outline-none"/>
+                        <input type="number" placeholder="Custo Diário (R$)" value={equipCost} onChange={e => setEquipCost(e.target.value)} className="w-32 bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs outline-none"/>
                         <button onClick={handleAddEquip} className="bg-brand-accent text-brand-primary font-bold px-3 rounded text-xs">+</button>
                     </div>
                     {equipList.length > 0 && (<div className="space-y-1 mt-2">
@@ -712,7 +712,7 @@ const DailyLogModal = ({ isOpen, onClose, onSave, projectId, machines, initialDa
                 </div>
                 <div className="flex justify-end gap-2 border-t border-slate-700 pt-4">
                     <button onClick={onClose} className="px-4 py-2 text-brand-muted font-bold hover:text-white">Cancelar</button>
-                    <button onClick={handleSubmit} className="bg-amber-600 text-white px-6 py-2 rounded-lg font-bold text-xs hover:bg-amber-500 uppercase">{initialData ? 'Salvar Edicao' : 'Salvar Diario'}</button>
+                    <button onClick={handleSubmit} className="bg-amber-600 text-white px-6 py-2 rounded-lg font-bold text-xs hover:bg-amber-500 uppercase">{initialData ? 'Salvar Edição' : 'Salvar Diário'}</button>
                 </div>
             </div>
         </div>);
@@ -729,7 +729,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
     const [editingDailyLog, setEditingDailyLog] = useState(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isFixedCostModalOpen, setIsFixedCostModalOpen] = useState(false);
-    // States DemissÃ£o e Acerto
+    // States Demissão e Acerto
     const [terminationModalOpen, setTerminationModalOpen] = useState(false);
     const [employeeToTerminate, setEmployeeToTerminate] = useState(null);
     const [severanceModalOpen, setSeveranceModalOpen] = useState(false);
@@ -741,10 +741,10 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
         const isSunday = today.getDay() === 0; // 0 = Domingo
         const dateKey = today.toISOString().split('T')[0];
         const storageKey = `sunday-auto-folga-${dateKey}`;
-        // Verifica se Ã© domingo e se a regra ainda nÃ£o foi aplicada hoje (para esta sessÃ£o/dia)
+        // Verifica se é domingo e se a regra ainda não foi aplicada hoje (para esta sessão/dia)
         if (isSunday && !hasAppliedSundayRule) {
             hasAppliedSundayRule = true;
-            // Atualiza todos os funcionÃ¡rios que estÃ£o "Trabalhando" para "Folga"
+            // Atualiza todos os funcionários que estão "Trabalhando" para "Folga"
             employees.forEach(emp => {
                 if (emp.status === 'Trabalhando') {
                     onUpdateEmployeeStatus(emp.id, 'Folga', 0);
@@ -780,7 +780,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
         if (editingDailyLog.date !== todayDate) {
             setIsDailyLogModalOpen(false);
             setEditingDailyLog(null);
-            window.alert('O prazo para editar este diario terminou. Apenas o diario do dia pode ser editado.');
+            window.alert('O prazo para editar este diário terminou. Apenas o diário do dia pode ser editado.');
         }
     }, [todayDate, isDailyLogModalOpen, editingDailyLog]);
     const currentProject = projects.find(p => p.id === selectedProjectId);
@@ -796,7 +796,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
             const basic = dailyRate * days;
             const foodDays = calculateFoodChargeDays(curr, curr.startDate, curr.terminationDate || todayDate);
             const food = ((curr.breakfastCost || 0) + (curr.lunchCost || 0) + (curr.dinnerCost || 0)) * foodDays;
-            // O custo adicional pode ser rescisÃ£o ou outros bÃ´nus
+            // O custo adicional pode ser rescisão ou outros bônus
             return acc + basic + (curr.totalAdditionalCost || 0) + food;
         }, 0);
         const equipCost = projectDailyLogs.reduce((acc, log) => acc + log.equipmentList.reduce((dayAcc, eq) => dayAcc + (eq.dailyCost || 0), 0), 0);
@@ -828,7 +828,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
     };
     const saveSeverance = (amount) => {
         if (employeeToPaySeverance) {
-            // Atualiza o funcionÃ¡rio removendo a flag pendente e definindo o custo
+            // Atualiza o funcionário removendo a flag pendente e definindo o custo
             onUpdateEmployeeStatus(employeeToPaySeverance.id, 'Demitido', amount, false);
             setEmployeeToPaySeverance(null);
         }
@@ -850,7 +850,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
     };
     const handleOpenEditDailyLog = (log) => {
         if (log.date !== todayDate) {
-            window.alert('So e permitido editar o diario do dia atual.');
+            window.alert('Só é permitido editar o diário do dia atual.');
             return;
         }
         setEditingDailyLog(log);
@@ -859,7 +859,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
     const handleSaveDailyLogWithRules = (payload) => {
         const isEditing = !!payload?.id;
         if (isEditing && payload.date !== todayDate) {
-            window.alert('Edicao bloqueada: o diario so pode ser editado ate 23:59 do proprio dia.');
+            window.alert('Edição bloqueada: o diário só pode ser editado até 23:59 do próprio dia.');
             return;
         }
         onSaveDailyLog(payload);
@@ -870,7 +870,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
         <div className="flex items-center gap-3">
             <div className="bg-brand-accent/20 p-2 rounded-lg"><BridgeIcon className="w-8 h-8 text-brand-accent"/></div>
             <div>
-                <h3 className="text-xl font-bold text-brand-light">GestÃ£o de Pontes</h3>
+                <h3 className="text-xl font-bold text-brand-light">Gestão de Pontes</h3>
                 <p className="text-[10px] text-brand-muted uppercase font-black tracking-widest">Controle de Projetos e Custos</p>
             </div>
         </div>
@@ -894,23 +894,23 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
       {selectedProjectId ? (<>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard title="Custos Materiais" value={formatCurrency(projectTotals.matCost)} icon={<CubeIcon className="w-8 h-8"/>} color="text-green-400"/>
-                <MetricCard title="MÃ£o de Obra + Fixos" value={formatCurrency(projectTotals.labCost)} icon={<UserGroupIcon className="w-8 h-8"/>} color="text-blue-400"/>
+                <MetricCard title="Mão de Obra + Fixos" value={formatCurrency(projectTotals.labCost)} icon={<UserGroupIcon className="w-8 h-8"/>} color="text-blue-400"/>
                 <MetricCard title="Custo Equipamentos" value={formatCurrency(projectTotals.equipCost)} icon={<GraderIcon className="w-8 h-8"/>} color="text-amber-400"/>
                 <div className="relative group cursor-pointer" onClick={() => setIsReportModalOpen(true)}>
                     <MetricCard title="Custo Total" value={formatCurrency(projectTotals.total)} icon={<ChartIcon className="w-8 h-8"/>} color="text-brand-accent"/>
-                    {/* BotÃ£o flutuante de relatÃ³rio sobre o card */}
+                    {/* Botão flutuante de relatório sobre o card */}
                     <div className="absolute top-2 right-2 bg-brand-light/10 backdrop-blur-sm p-1.5 rounded-full hover:bg-brand-accent/80 transition-all border border-white/20 shadow-lg z-10 group-hover:scale-110">
                         <PrinterIcon className="w-4 h-4 text-white"/>
                     </div>
                     {/* Tooltip */}
                     <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <span className="bg-white text-brand-primary font-bold text-xs px-3 py-1 rounded shadow-lg uppercase tracking-wide">Gerar RelatÃ³rio</span>
+                        <span className="bg-white text-brand-primary font-bold text-xs px-3 py-1 rounded shadow-lg uppercase tracking-wide">Gerar Relatório</span>
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Coluna Equipe & DiÃ¡rio */}
+                {/* Coluna Equipe & Diário */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-blue-500">
                         <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
@@ -922,16 +922,16 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
                         </div>
                         <div className="overflow-x-auto overflow-visible">
                             <table className="min-w-full text-xs text-left text-brand-muted">
-                                <thead className="bg-brand-primary uppercase"><tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">FunÃ§Ã£o</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 text-right">AÃ§Ãµes</th></tr></thead>
+                                <thead className="bg-brand-primary uppercase"><tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Função</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 text-right">Ações</th></tr></thead>
                                 <tbody className="divide-y divide-brand-primary">
                                     {projectEmployees.map(emp => {
-                // Verifica se Ã© demitido com valor pendente
+                // Verifica se é demitido com valor pendente
                 const isDismissedPending = emp.status === 'Demitido' && emp.severancePending;
                 const isDismissed = emp.status === 'Demitido';
                 return (<tr key={emp.id} className={`hover:bg-slate-700/50 ${isDismissedPending ? 'bg-yellow-500/5' : ''}`}>
                                                 <td className="px-4 py-3 font-bold text-brand-light flex flex-col">
                                                     {emp.name}
-                                                    {isDismissedPending && <span className="text-[10px] font-black text-yellow-500 uppercase mt-0.5 animate-pulse bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20 inline-block w-fit">âš  Aguardando Valor</span>}
+                                                    {isDismissedPending && <span className="text-[10px] font-black text-yellow-500 uppercase mt-0.5 animate-pulse bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20 inline-block w-fit">⚠ Aguardando Valor</span>}
                                                 </td>
                                                 <td className="px-4 py-3">{emp.role}</td>
                                                 <td className="px-4 py-3 text-center">
@@ -945,15 +945,15 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
                                                             <option value="Folga" className="bg-brand-secondary text-brand-light">Folga</option>
                                                             <option value="Atestado" className="bg-brand-secondary text-brand-light">Atestado</option>
                                                             <option value="De Baixada" className="bg-brand-secondary text-brand-light">De Baixada</option>
-                                                            <option value="FÃ©rias" className="bg-brand-secondary text-brand-light">FÃ©rias</option>
+                                                            <option value="Férias" className="bg-brand-secondary text-brand-light">Férias</option>
                                                             <option value="Demitido" className="bg-brand-secondary text-brand-light">Demitido</option>
                                                         </select>)}
                                                 </td>
                                                 <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
                                                     {isDismissedPending && (<button onClick={() => openSeveranceModal(emp.id, emp.name)} className="text-yellow-400 hover:text-yellow-900 hover:bg-yellow-400 text-[10px] font-bold uppercase border border-yellow-500/50 px-3 py-1.5 rounded transition-all flex items-center gap-1 shadow-[0_0_10px_rgba(234,179,8,0.2)]" title="Informar valor do acerto">
-                                                            <BriefcaseIcon className="w-3 h-3"/> LanÃ§ar Acerto
+                                                            <BriefcaseIcon className="w-3 h-3"/> Lançar Acerto
                                                         </button>)}
-                                                    <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-500 hover:text-red-400 p-1" title="Remover HistÃ³rico"><TrashIcon className="w-4 h-4"/></button>
+                                                    <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-500 hover:text-red-400 p-1" title="Remover Histórico"><TrashIcon className="w-4 h-4"/></button>
                                                 </td>
                                             </tr>);
             })}
@@ -965,7 +965,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
 
                     <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-amber-500">
                         <div className="flex justify-between items-center mb-6">
-                            <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2"><BookOpenIcon className="w-6 h-6 text-amber-400"/> DiÃ¡rio de Obras</h4>
+                            <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2"><BookOpenIcon className="w-6 h-6 text-amber-400"/> Díario de Obras</h4>
                             <button onClick={() => {
                 setEditingDailyLog(null);
                 setIsDailyLogModalOpen(true);
@@ -987,7 +987,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
                                             onClick={() => handleOpenEditDailyLog(log)}
                                             disabled={log.date !== todayDate}
                                             className="flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-1 rounded border border-slate-600 text-slate-300 hover:text-white hover:border-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
-                                            title={log.date === todayDate ? 'Editar diario do dia' : 'Somente diario do dia atual pode ser editado'}
+                                            title={log.date === todayDate ? 'Editar diário do dia' : 'Somente diário do dia atual pode ser editado'}
                                         >
                                             <PencilIcon className="w-3 h-3"/> Editar
                                         </button>
@@ -999,7 +999,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
                                                 </span>))}
                                         </div>)}
                                 </div>))}
-                            {projectDailyLogs.length === 0 && <div className="text-center py-8 text-brand-muted italic">Nenhum registro de diÃ¡rio.</div>}
+                            {projectDailyLogs.length === 0 && <div className="text-center py-8 text-brand-muted italic">Nenhum registro de diário.</div>}
                         </div>
                     </div>
                 </div>
@@ -1015,28 +1015,27 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
             }} className="bg-teal-600 text-white p-2 rounded-lg hover:bg-teal-500 shadow-lg transition-all" title="Adicionar Material"><PlusIcon className="w-4 h-4"/></button>
                         </div>
                         <div className="space-y-3 overflow-y-auto flex-1 max-h-[600px] pr-1">
-                            {projectMaterials.map(m => (<div key={m.id} className="bg-brand-primary p-3 rounded-lg border border-slate-700 group hover:border-teal-500/30 transition-colors">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <p className="font-bold text-brand-light text-xs break-words leading-tight">{m.material}</p>
-                                            <p className="text-[10px] text-brand-muted">{m.supplier} â€¢ {new Date(m.receiptDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
-                                            <p className="text-[10px] text-brand-muted">{m.quantity} {m.unit} x {formatCurrency(m.unitPrice)}</p>
-                                            <p className="text-[10px] text-brand-muted">Frete: {formatCurrency(m.freightValue || 0)} â€¢ Impostos: {formatCurrency(m.taxValue || 0)}</p>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-2">
-                                            <p className="font-black text-teal-400 text-xs">{formatCurrency(m.totalValue)}</p>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => handleOpenEditMaterial(m)} className="text-[10px] font-black uppercase px-2 py-1 rounded border border-blue-500/50 text-blue-400 hover:bg-blue-500/15 transition-colors flex items-center gap-1" title="Editar Lançamento">
-                                                    <PencilIcon className="w-3 h-3"/> Editar Lançamento
-                                                </button>
-                                                <button onClick={() => onDeleteMaterial(m.id)} className="text-[10px] font-black uppercase px-2 py-1 rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1" title="Excluir Lançamento">
-                                                    <TrashIcon className="w-3 h-3"/> Excluir
-                                                </button>
-                                            </div>
-                                        </div>
+                            {projectMaterials.map(m => (<div key={m.id} className="bg-brand-primary p-3 rounded-lg border border-slate-700 group hover:border-teal-500/30 transition-colors space-y-3">
+                                    <div className="space-y-1">
+                                        <p className="font-bold text-brand-light text-xs break-words leading-tight">{m.material}</p>
+                                        <p className="text-[10px] text-brand-muted break-words">{m.supplier}  {new Date(m.receiptDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                                        <p className="text-[10px] text-brand-muted">{m.quantity} {m.unit} x {formatCurrency(m.unitPrice)}</p>
+                                        <p className="text-[10px] text-brand-muted">Frete: {formatCurrency(m.freightValue || 0)}  Impostos: {formatCurrency(m.taxValue || 0)}</p>
+                                    </div>
+                                    <div className="pt-2 border-t border-slate-700">
+                                        <p className="text-[9px] uppercase font-bold text-brand-muted">Total</p>
+                                        <p className="font-black text-teal-400 text-sm">{formatCurrency(m.totalValue)}</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <button onClick={() => handleOpenEditMaterial(m)} className="w-full text-[10px] font-black uppercase px-2 py-2 rounded border border-blue-500/50 text-blue-400 hover:bg-blue-500/15 transition-colors flex items-center justify-center gap-1" title="Editar Lançamento">
+                                            <PencilIcon className="w-3 h-3"/> Editar Lançamento
+                                        </button>
+                                        <button onClick={() => onDeleteMaterial(m.id)} className="w-full text-[10px] font-black uppercase px-2 py-2 rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1" title="Excluir Lançamento">
+                                            <TrashIcon className="w-3 h-3"/> Excluir
+                                        </button>
                                     </div>
                                 </div>))}
-                            {projectMaterials.length === 0 && <div className="text-center py-10 text-brand-muted italic bg-brand-primary/20 rounded-lg">Nenhum material lanÃ§ado.</div>}
+                            {projectMaterials.length === 0 && <div className="text-center py-10 text-brand-muted italic bg-brand-primary/20 rounded-lg">Nenhum material lançado.</div>}
                         </div>
                     </div>
                 </div>
@@ -1047,7 +1046,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
             <button onClick={() => setProjectModalOpen(true)} className="mt-4 bg-brand-accent text-brand-primary px-6 py-2 rounded-lg font-black uppercase text-xs hover:scale-105 transition-transform">Criar Primeiro Projeto</button>
         </div>)}
 
-      {/* RenderizaÃ§Ã£o dos Modais */}
+      {/* Renderização dos Modais */}
       <ProjectModal isOpen={isProjectModalOpen} onClose={() => setProjectModalOpen(false)} onSave={(name, status, start) => onAddProject({ name, status: status, startDate: start })}/>
       <TerminationModal isOpen={terminationModalOpen} onClose={() => setTerminationModalOpen(false)} onConfirm={confirmTermination}/>
       <SeverancePayModal isOpen={severanceModalOpen} onClose={() => setSeveranceModalOpen(false)} employeeName={employeeToPaySeverance?.name || ''} onSave={saveSeverance}/>
@@ -1088,4 +1087,3 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
     </div>);
 };
 export default PontesView;
-

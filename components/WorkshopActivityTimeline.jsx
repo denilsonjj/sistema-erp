@@ -5,7 +5,7 @@ const parseForecastChangeFromMessage = (rawMessage) => {
     const message = String(rawMessage || '').replace(/\s+/g, ' ').trim();
     if (!message)
         return null;
-    let actorLabel = 'Usuario';
+    let actorLabel = 'Usuário';
     let content = message;
     const prefixedMatch = message.match(/^(.+?):\s(.+)$/);
     if (prefixedMatch && /Previs[aã]o de libera[cç][aã]o/i.test(prefixedMatch[2])) {
@@ -30,13 +30,13 @@ const parseForecastChangeFromItem = (item) => {
         if (!machinePrefix) {
             return null;
         }
-        const actorName = item?.actorName || 'Usuario';
+        const actorName = item?.actorName || 'Usuário';
         const actorRole = item?.actorRole ? ` (${item.actorRole})` : '';
         return {
             actorLabel: `${actorName}${actorRole}`,
             machinePrefix,
-            fromLabel: metadata.fromLabel || 'sem previsao',
-            toLabel: metadata.toLabel || 'sem previsao'
+            fromLabel: metadata.fromLabel || 'sem previsão',
+            toLabel: metadata.toLabel || 'sem previsão'
         };
     }
     return parseForecastChangeFromMessage(item?.message);

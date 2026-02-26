@@ -99,7 +99,7 @@ const normalizeTimeFromTs = (ts) => {
     return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 };
 const mapActivityRowToNotification = (row, read = false) => {
-    const actorName = row?.actor_name || 'Usuario';
+    const actorName = row?.actor_name || 'Usuário';
     const actorRole = row?.actor_role || 'Operador';
     return {
         id: row?.id || createUuid(),
@@ -250,7 +250,7 @@ const App = () => {
             const supabase = getSupabaseClient();
             const { error } = await supabase.from(AUDIT_LOG_TABLE).insert({
                 actor_id: user.id,
-                actor_name: user.name || user.username || user.email || 'Usuario',
+                actor_name: user.name || user.username || user.email || 'Usuário',
                 actor_role: user.role || 'Operador',
                 event_type: type || 'info',
                 message,
@@ -284,7 +284,7 @@ const App = () => {
                         message,
                         type,
                         read: false,
-                        actorName: user?.name || user?.username || user?.email || 'Usuario',
+                        actorName: user?.name || user?.username || user?.email || 'Usuário',
                         actorRole: user?.role || 'Operador',
                         metadata: options?.metadata || {}
                     }, ...prev];
@@ -424,7 +424,7 @@ const App = () => {
                 throw error;
             return;
         }
-        throw new Error(`Acao offline nao suportada: ${action.type}`);
+        throw new Error(`Ação offline não suportada: ${action.type}`);
     }, []);
     const executeDbAction = useCallback(async (action, options) => {
         const { silentOffline = false } = options || {};
@@ -472,7 +472,7 @@ const App = () => {
                 setUser(null);
                 setUsers([]);
                 setSelectedObraId('all');
-                addNotification('Seu acesso esta desativado. Contate o administrador.', 'alert');
+                addNotification('Seu acesso está desativado. Contate o administrador.', 'alert');
                 return;
             }
             const permissions = { ...DEFAULT_USER_PERMISSIONS };
@@ -481,7 +481,7 @@ const App = () => {
             });
             const normalizedUser = {
                 id: authUser.id,
-                name: profile?.full_name || authUser.email || 'Usuario',
+                name: profile?.full_name || authUser.email || 'Usuário',
                 role: profile?.role || 'Operador',
                 username: profile?.username || authUser.email || 'usuario',
                 email: authUser.email || '',
@@ -534,7 +534,7 @@ const App = () => {
             supabase = getSupabaseClient();
         }
         catch (error) {
-            console.error('Supabase nao configurado corretamente:', error);
+            console.error('Supabase não configurado corretamente:', error);
             setAuthLoading(false);
             return () => {
                 isMounted = false;
@@ -586,7 +586,7 @@ const App = () => {
             const supabase = getSupabaseClient();
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
-                return { error: error.message || 'Nao foi possivel autenticar.' };
+                return { error: error.message || 'Não foi possível autenticar.' };
             }
             await loadAuthenticatedUser(data.user || null);
             addNotification('Login realizado com sucesso.', 'success');
@@ -978,7 +978,7 @@ const App = () => {
         }
         catch (error) {
             console.error('Erro ao carregar dados base do Supabase:', error);
-            addNotification('Nao foi possivel carregar dados base do Supabase.', 'alert', { skipAudit: true, localOnly: true, dedupeWindowMs: 300000 });
+            addNotification('Não foi possível carregar dados base do Supabase.', 'alert', { skipAudit: true, localOnly: true, dedupeWindowMs: 300000 });
         }
     }, [saveSnapshotCache, selectedObraId, user]);
     useEffect(() => {
@@ -1041,7 +1041,7 @@ const App = () => {
             });
             const normalizedUsers = (profilesRows || []).map((profile) => ({
                 id: profile.id,
-                name: profile.full_name || profile.username || 'Usuario',
+                name: profile.full_name || profile.username || 'Usuário',
                 role: profile.role || 'Operador',
                 username: profile.username || '',
                 allowedObraId: profile.allowed_obra_id || 'all',
@@ -1052,8 +1052,8 @@ const App = () => {
             setUsers(normalizedUsers);
         }
         catch (error) {
-            console.error('Erro ao carregar usuarios:', error);
-            addNotification('Nao foi possivel carregar usuarios/permissoes.', 'alert', { skipAudit: true, localOnly: true, dedupeWindowMs: 300000 });
+            console.error('Erro ao carregar usuários:', error);
+            addNotification('Não foi possível carregar usuários/permissões.', 'alert', { skipAudit: true, localOnly: true, dedupeWindowMs: 300000 });
         }
         finally {
             setUsersLoading(false);
@@ -1395,9 +1395,9 @@ const App = () => {
         const nextForecastDate = details.releaseForecastDate || '';
         if (previousForecastDate !== nextForecastDate) {
             const machinePrefix = previousMachine?.prefix || 'equipamento';
-            const previousLabel = previousForecastDate ? new Date(`${previousForecastDate}T00:00:00`).toLocaleDateString('pt-BR') : 'sem previsao';
-            const nextLabel = nextForecastDate ? new Date(`${nextForecastDate}T00:00:00`).toLocaleDateString('pt-BR') : 'sem previsao';
-            addNotification(`Previsao de liberacao do ${machinePrefix} alterada de ${previousLabel} para ${nextLabel}.`, 'info', {
+            const previousLabel = previousForecastDate ? new Date(`${previousForecastDate}T00:00:00`).toLocaleDateString('pt-BR') : 'sem previsão';
+            const nextLabel = nextForecastDate ? new Date(`${nextForecastDate}T00:00:00`).toLocaleDateString('pt-BR') : 'sem previsão';
+            addNotification(`Previsão de liberação do ${machinePrefix} alterada de ${previousLabel} para ${nextLabel}.`, 'info', {
                 dedupeWindowMs: 0,
                 metadata: {
                     event: 'forecast_update',
@@ -1432,16 +1432,16 @@ const App = () => {
             };
             await executeDbAction({ type: 'upsert', table: 'equipamentos', payload, onConflict: 'id' });
             await fetchCoreData();
-            addNotification(machineId ? 'Maquina atualizada com sucesso' : 'Nova maquina cadastrada', 'success');
+            addNotification(machineId ? 'Máquina atualizada com sucesso' : 'Nova máquina cadastrada', 'success');
             setMachineModalOpen(false);
         }
         catch (error) {
             console.error('Erro ao salvar maquina:', error);
-            addNotification('Falha ao salvar maquina no Supabase.', 'alert');
+            addNotification('Falha ao salvar máquina no Supabase.', 'alert');
         }
     };
     const handleDeleteMachine = async (id) => {
-        if (!window.confirm('Tem certeza que deseja excluir esta maquina?'))
+        if (!window.confirm('Tem certeza que deseja excluir esta máquina?'))
             return;
         try {
             await executeDbAction({
@@ -1451,11 +1451,11 @@ const App = () => {
                 match: { id }
             });
             await fetchCoreData();
-            addNotification('Maquina excluida', 'info');
+            addNotification('Máquina excluída', 'info');
         }
         catch (error) {
             console.error('Erro ao excluir maquina:', error);
-            addNotification('Falha ao excluir maquina no Supabase.', 'alert');
+            addNotification('Falha ao excluir máquina no Supabase.', 'alert');
         }
     };
     const handleSaveObra = async (data, id) => {
@@ -1486,7 +1486,7 @@ const App = () => {
                 match: { id }
             });
             await fetchCoreData();
-            addNotification('Obra excluida', 'info');
+            addNotification('Obra excluída', 'info');
         }
         catch (error) {
             console.error('Erro ao excluir obra:', error);
@@ -1530,7 +1530,7 @@ const App = () => {
                 match: { id }
             });
             await fetchCoreData();
-            addNotification('Trabalhador excluido', 'info');
+            addNotification('Trabalhador excluído', 'info');
         }
         catch (error) {
             console.error('Erro ao excluir trabalhador:', error);
@@ -1573,7 +1573,7 @@ const App = () => {
     const handleSaveMaintenanceTask = async ({ machineId, task, dueDate }) => {
         const machine = machines.find((item) => item.id === machineId);
         if (!machine) {
-            addNotification('Equipamento nao encontrado para agendamento.', 'alert');
+            addNotification('Equipamento não encontrado para agendamento.', 'alert');
             return;
         }
         const item = {
@@ -2066,22 +2066,22 @@ const App = () => {
             }
         });
         if (error) {
-            throw new Error(error.message || 'Falha ao executar funcao de usuarios.');
+            throw new Error(error.message || 'Falha ao executar função de usuários.');
         }
         if (!data?.ok) {
-            throw new Error(data?.error || 'Falha ao processar operacao de usuario.');
+            throw new Error(data?.error || 'Falha ao processar operação de usuário.');
         }
         return data;
     }, []);
     const handleCreateUserConfig = async (payload) => {
         if (!user?.permissions?.editConfiguracoes) {
-            return { error: 'Sem permissao para criar usuarios.' };
+            return { error: 'Sem permissão para criar usuários.' };
         }
         setUsersSaving(true);
         try {
             const activeUsers = users.filter((item) => item.isActive !== false).length;
             if (activeUsers >= MAX_ACTIVE_USERS) {
-                return { error: `Limite de ${MAX_ACTIVE_USERS} usuarios ativos atingido.` };
+                return { error: `Limite de ${MAX_ACTIVE_USERS} usuários ativos atingido.` };
             }
             await invokeAdminUsersFunction({
                 action: 'create',
@@ -2096,12 +2096,12 @@ const App = () => {
                 isActive: payload.isActive !== false
             });
             await fetchUsers();
-            addNotification('Usuario criado com sucesso.', 'success');
+            addNotification('Usuário criado com sucesso.', 'success');
             return { error: null };
         }
         catch (error) {
-            console.error('Erro ao criar usuario:', error);
-            return { error: error?.message || 'Falha ao criar usuario.' };
+            console.error('Erro ao criar usuário:', error);
+            return { error: error?.message || 'Falha ao criar usuário.' };
         }
         finally {
             setUsersSaving(false);
@@ -2109,10 +2109,10 @@ const App = () => {
     };
     const handleDeleteUserConfig = async (targetUser) => {
         if (!targetUser?.id) {
-            return { error: 'Usuario invalido.' };
+            return { error: 'Usuário inválido.' };
         }
         if (targetUser.id === user?.id) {
-            return { error: 'Nao e permitido excluir o proprio usuario.' };
+            return { error: 'Não é permitido excluir o próprio usuário.' };
         }
         setUsersSaving(true);
         try {
@@ -2121,12 +2121,12 @@ const App = () => {
                 userId: targetUser.id
             });
             await fetchUsers();
-            addNotification('Usuario excluido com sucesso.', 'info');
+            addNotification('Usuário excluído com sucesso.', 'info');
             return { error: null };
         }
         catch (error) {
-            console.error('Erro ao excluir usuario:', error);
-            return { error: error?.message || 'Falha ao excluir usuario.' };
+            console.error('Erro ao excluir usuário:', error);
+            return { error: error?.message || 'Falha ao excluir usuário.' };
         }
         finally {
             setUsersSaving(false);
@@ -2169,12 +2169,12 @@ const App = () => {
                 const { data: authData } = await supabase.auth.getUser();
                 await loadAuthenticatedUser(authData.user || null);
             }
-            addNotification('Usuario atualizado com sucesso.', 'success');
+            addNotification('Usuário atualizado com sucesso.', 'success');
             return { error: null };
         }
         catch (error) {
-            console.error('Erro ao salvar configuracoes do usuario:', error);
-            return { error: error?.message || 'Falha ao salvar usuario no Supabase.' };
+            console.error('Erro ao salvar configurações do usuário:', error);
+            return { error: error?.message || 'Falha ao salvar usuário no Supabase.' };
         }
         finally {
             setUsersSaving(false);
@@ -2182,10 +2182,10 @@ const App = () => {
     };
     const handleToggleUserStatus = async (targetUser) => {
         if (!targetUser?.id) {
-            return { error: 'Usuario invalido.' };
+            return { error: 'Usuário inválido.' };
         }
         if (targetUser.id === user.id && targetUser.isActive) {
-            return { error: 'Nao e permitido desativar o proprio usuario.' };
+            return { error: 'Não é permitido desativar o próprio usuário.' };
         }
         setUsersSaving(true);
         try {
@@ -2193,7 +2193,7 @@ const App = () => {
             const nextStatus = !targetUser.isActive;
             const activeUsers = users.filter((item) => item.isActive !== false).length;
             if (nextStatus && activeUsers >= MAX_ACTIVE_USERS) {
-                return { error: `Limite de ${MAX_ACTIVE_USERS} usuarios ativos atingido.` };
+                return { error: `Limite de ${MAX_ACTIVE_USERS} usuários ativos atingido.` };
             }
             const { error } = await supabase
                 .from('profiles')
@@ -2202,12 +2202,12 @@ const App = () => {
             if (error)
                 throw error;
             await fetchUsers();
-            addNotification(nextStatus ? 'Usuario ativado.' : 'Usuario desativado.', 'info');
+            addNotification(nextStatus ? 'Usuário ativado.' : 'Usuário desativado.', 'info');
             return { error: null };
         }
         catch (error) {
-            console.error('Erro ao alterar status do usuario:', error);
-            return { error: error?.message || 'Falha ao atualizar status do usuario.' };
+            console.error('Erro ao alterar status do usuário:', error);
+            return { error: error?.message || 'Falha ao atualizar status do usuário.' };
         }
         finally {
             setUsersSaving(false);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { FuelIcon, TrashIcon, TruckIcon, HistoryIcon, PlusIcon, CheckCircleIcon, XMarkIcon, ArrowUpIcon, ArrowDownIcon, CubeIcon, CogIcon } from './icons';
 import MachineList from './MachineList';
 import LubricationModal from './LubricationModal';
@@ -294,3 +294,4 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
     </div>);
 };
 export default AbastecimentosView;
+

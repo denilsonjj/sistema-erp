@@ -34,7 +34,7 @@ const LoginView = ({ onLogin }) => {
                         </span>
                     </div>
                     <div className="h-0.5 w-12 bg-brand-logo/30 mt-4 rounded-full"></div>
-                    <p className="text-brand-muted text-sm mt-4 uppercase tracking-widest font-bold opacity-80">Gestao de Obra</p>
+                    <p className="text-brand-muted text-sm mt-4 uppercase tracking-widest font-bold opacity-80">Gestão de Obras</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">

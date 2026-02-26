@@ -33,7 +33,7 @@ const EmCampoView = ({
   return (
     <div className="bg-brand-secondary p-6 rounded-lg shadow-lg">
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
-        <h3 className="text-lg font-semibold text-brand-light">Visao Geral dos Equipamentos</h3>
+        <h3 className="text-lg font-semibold text-brand-light">Visão Geral dos Equipamentos</h3>
         <div className="w-full md:w-80">
           <label className="block text-[10px] font-black text-brand-muted uppercase mb-1 tracking-wider">
             Buscar por prefixo

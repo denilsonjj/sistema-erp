@@ -665,7 +665,19 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
 
             <div className="bg-brand-secondary p-6 rounded-lg shadow-lg">
                 <h3 className="text-lg font-semibold text-brand-light mb-4">Visão Geral dos Equipamentos</h3>
-                <MachineList machines={machines} maintenanceTasks={maintenanceTasks} viewMode="em_campo" availableMachinesToAdd={availableMachinesToAdd} onAddHorimetro={onAddHorimetro} onSelectMachine={onSelectMachine} onAddMachineToDashboard={onAddMachineToDashboard} onRemoveMachineFromDashboard={onRemoveMachineFromDashboard} onUpdateMachineStatus={onUpdateMachineStatus} dashboardMachineIds={dashboardMachineIds}/>
+                <MachineList
+                    machines={machines}
+                    maintenanceTasks={maintenanceTasks}
+                    viewMode="em_campo"
+                    readOnly={true}
+                    availableMachinesToAdd={availableMachinesToAdd}
+                    onAddHorimetro={onAddHorimetro}
+                    onSelectMachine={onSelectMachine}
+                    onAddMachineToDashboard={onAddMachineToDashboard}
+                    onRemoveMachineFromDashboard={onRemoveMachineFromDashboard}
+                    onUpdateMachineStatus={onUpdateMachineStatus}
+                    dashboardMachineIds={dashboardMachineIds}
+                />
             </div>
 
             <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-6">
@@ -1144,9 +1156,30 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-green-500">
                   <h5 className="text-brand-light font-bold mb-4">Histórico Entradas (Agregados)</h5>
                   <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[350px] overflow-y-auto">
-                      <table className="min-w-full text-sm text-brand-muted"><thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Produto</th><th className="px-4 py-3 text-right">Peso</th></tr></thead><tbody>{sortedUsinaDeliveries.map((delivery) => (<tr key={delivery.id} className="border-b border-slate-700"><td className="px-4 py-3">{new Date(delivery.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td className="px-4 py-3">{delivery.product}</td><td className="px-4 py-3 text-right font-bold text-green-400">{delivery.tons.toFixed(2)}</td></tr>))}
-                      {sortedUsinaDeliveries.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center italic">Sem dados.</td></tr>}
-                      </tbody></table>
+                      <table className="min-w-full table-fixed text-sm text-brand-muted">
+                          <colgroup>
+                              <col className="w-[34%]" />
+                              <col className="w-[46%]" />
+                              <col className="w-[20%]" />
+                          </colgroup>
+                          <thead className="bg-slate-800 text-xs uppercase sticky top-0 z-10">
+                              <tr>
+                                  <th className="px-4 py-3 text-left">Data</th>
+                                  <th className="px-4 py-3 text-left">Produto</th>
+                                  <th className="px-4 py-3 text-right">Peso</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {sortedUsinaDeliveries.map((delivery) => (
+                                  <tr key={delivery.id} className="border-b border-slate-700 hover:bg-slate-700/50 transition-colors">
+                                      <td className="px-4 py-3 whitespace-nowrap">{new Date(delivery.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                      <td className="px-4 py-3 text-brand-light">{delivery.product}</td>
+                                      <td className="px-4 py-3 text-right font-bold text-green-400 tabular-nums">{delivery.tons.toFixed(2)}</td>
+                                  </tr>
+                              ))}
+                              {sortedUsinaDeliveries.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center italic">Sem dados.</td></tr>}
+                          </tbody>
+                      </table>
                   </div>
               </div>
 

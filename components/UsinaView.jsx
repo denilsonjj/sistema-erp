@@ -165,6 +165,27 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
         }), { net: 0, gross: 0, waste: 0, hours: 0, cap: 0, brita1: 0, brita0: 0, dust: 0 });
         return { rangeProduction, bituSummary, prodTotals };
     }, [productionLogs, bituDeliveries, reportStartDate, reportEndDate]);
+    const aggregateReportData = useMemo(() => {
+        const allTimeByProduct = {};
+        const rangeByProduct = {};
+        deliveries.forEach((delivery) => {
+            const product = String(delivery.product || 'Sem produto');
+            const tons = Number(delivery.tons || 0);
+            allTimeByProduct[product] = (allTimeByProduct[product] || 0) + tons;
+            if (delivery.date >= reportStartDate && delivery.date <= reportEndDate) {
+                rangeByProduct[product] = (rangeByProduct[product] || 0) + tons;
+            }
+        });
+        const products = Array.from(new Set([...Object.keys(allTimeByProduct), ...Object.keys(rangeByProduct)])).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const rows = products.map((product) => ({
+            product,
+            allTime: allTimeByProduct[product] || 0,
+            inRange: rangeByProduct[product] || 0
+        }));
+        const totalAllTime = rows.reduce((acc, row) => acc + row.allTime, 0);
+        const totalInRange = rows.reduce((acc, row) => acc + row.inRange, 0);
+        return { rows, totalAllTime, totalInRange };
+    }, [deliveries, reportEndDate, reportStartDate]);
     // --- HANDLERS ---
     const handleAddDelivery = (e) => {
         e.preventDefault();
@@ -262,6 +283,39 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
             styles: { fontSize: 9, fontStyle: 'bold' }
         });
         doc.save(`relatorio_usina_${reportStartDate}_a_${reportEndDate}.pdf`);
+    };
+    const downloadAggregatesPDF = () => {
+        const doc = new jsPDF({ orientation: 'landscape' });
+        const { rows, totalAllTime, totalInRange } = aggregateReportData;
+        doc.setFontSize(18);
+        doc.text("Relatório de Agregados - Usina", 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Período selecionado: ${new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 28);
+        doc.text(`Total geral desde o início da obra: ${totalAllTime.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} t`, 14, 34);
+        autoTable(doc, {
+            startY: 40,
+            head: [['Produto', 'Total no Período (t)', 'Total Geral na Obra (t)']],
+            body: rows.map((row) => [
+                row.product,
+                row.inRange.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                row.allTime.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            ]),
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+        });
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 8,
+            head: [['Resumo', 'Valor']],
+            body: [
+                ['Total no período', `${totalInRange.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} t`],
+                ['Total geral acumulado da obra', `${totalAllTime.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} t`]
+            ],
+            styles: { fontSize: 10, fontStyle: 'bold' },
+            headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255] },
+            columnStyles: { 1: { halign: 'right' } }
+        });
+        doc.save(`relatorio_agregados_${reportStartDate}_a_${reportEndDate}.pdf`);
     };
     const trucks = useMemo(() => machines.filter(m => m.name.toLowerCase().includes('caminhão') && !m.name.toLowerCase().includes('pipa')), [machines]);
     const currentNetProduction = Math.max(0, parseLocaleDecimal(prodGross) - parseLocaleDecimal(prodWaste));
@@ -494,7 +548,17 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
         </div>
 
         <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-green-500">
-            <h4 className="text-lg font-semibold text-brand-light mb-6 flex items-center gap-2"><CubeIcon className="w-6 h-6 text-brand-accent"/> Estoque de Agregados</h4>
+            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2"><CubeIcon className="w-6 h-6 text-brand-accent"/> Estoque de Agregados</h4>
+                <button
+                    onClick={downloadAggregatesPDF}
+                    className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-black text-xs flex items-center gap-2 transition-all shadow-lg active:scale-95 uppercase tracking-wider"
+                    title="Gerar relatório de agregados com totais do período e acumulado da obra"
+                >
+                    <PrinterIcon className="w-4 h-4" />
+                    PDF Agregados
+                </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">{Object.entries(totals).map(([key, value]) => (<div key={key} className="bg-brand-primary p-4 rounded-lg border border-slate-700"><label className="block text-xs font-bold text-brand-muted uppercase mb-2">{key}</label><div className="text-2xl font-bold text-brand-light">{value.toFixed(1)} <span className="text-sm font-normal text-brand-muted">t</span></div></div>))}</div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1 bg-brand-primary p-6 rounded-lg border border-slate-700 h-fit">

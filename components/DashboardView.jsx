@@ -216,7 +216,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
             head: [['Categoria', 'Custo Total (R$)']],
             body: [
                 ['Materiais', formatCurrency(totalMaterials)],
-                ['M?o de Obra', formatCurrency(totalLabor)],
+                ['Mão de Obra', formatCurrency(totalLabor)],
                 ['Equipamentos', formatCurrency(totalEquipment)],
                 ['TOTAL GERAL', formatCurrency(totalGeneral)]
             ],
@@ -300,7 +300,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
                                 <span className="text-lg font-bold text-green-600">{formatCurrency(totalMaterials)}</span>
                             </div>
                             <div className="bg-slate-100 p-3 rounded border">
-                                <span className="text-[9px] uppercase font-bold text-slate-400 block">M?o de Obra</span>
+                                <span className="text-[9px] uppercase font-bold text-slate-400 block">Mão de Obra</span>
                                 <span className="text-lg font-bold text-blue-600">{formatCurrency(totalLabor)}</span>
                             </div>
                             <div className="bg-slate-100 p-3 rounded border">
@@ -322,7 +322,7 @@ const DashboardBridgeReportModal = ({ isOpen, onClose, project, materials, emplo
                             </tbody>
                         </table>
 
-                        <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">M?o de Obra (Proporcional ao Per?odo)</h3>
+                        <h3 className="text-xs font-black uppercase border-b mb-3 pb-1">Mão de Obra (Proporcional ao Período)</h3>
                         <table className="w-full text-xs text-left mb-8 border-collapse">
                             <thead className="bg-slate-100 font-bold"><tr><th className="p-2">Colaborador</th><th className="p-2 text-center">Dias no Período</th><th className="p-2 text-right">Custo Apróx.</th></tr></thead>
                             <tbody>
@@ -534,9 +534,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
     const generateOficinaPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
         doc.setFontSize(18);
-        doc.text("Relat?rio - Gest?o do P?tio (Oficina)", 14, 20);
+        doc.text("Relatório - Gestão do Pátio (Oficina)", 14, 20);
         doc.setFontSize(10);
-        doc.text(`Data de Gera??o: ${new Date().toLocaleDateString('pt-BR')} ?s ${new Date().toLocaleTimeString('pt-BR')}`, 14, 26);
+        doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 26);
         const tableBody = stoppedMachines.map(m => {
             const durationString = calculateDurationString(m.statusChangeDate, m.lastStatusChangeTime);
             return [
@@ -552,7 +552,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
         });
         autoTable(doc, {
             startY: 32,
-            head: [['Prefixo', 'Equipamento', 'Data Paralisa??o', 'Motivo', 'Situa??o', 'Respons?vel', 'Tempo P?tio (?til)', 'Previs?o Sa?da']],
+            head: [['Prefixo', 'Equipamento', 'Data Paralisação', 'Motivo', 'Situação', 'Responsável', 'Tempo Pátio (Útil)', 'Previsão Saída']],
             body: tableBody,
             styles: { fontSize: 9, cellPadding: 3 },
             headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -632,7 +632,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                 <MetricCard title="Horas Trab. (Mês)" value={`${workedHoursThisMonth.toLocaleString('pt-BR')} h`} icon={<ChartIcon className="w-8 h-8"/>} color="text-indigo-400"/>
             </div>
             <div className="bg-brand-secondary p-6 rounded-lg shadow-lg flex flex-col">
-                <h3 className="text-sm font-bold text-brand-muted uppercase mb-4 tracking-widest">Gest?o do P?tio (Atual)</h3>
+                <h3 className="text-sm font-bold text-brand-muted uppercase mb-4 tracking-widest">Gestão do Pátio (Atual)</h3>
                 <OficinaSummary machines={stoppedMachines} maintenanceTasks={maintenanceTasks} recentlyReleasedMachines={recentlyReleasedMachines}/>
             </div>
 
@@ -664,7 +664,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
             </div>
 
             <div className="bg-brand-secondary p-6 rounded-lg shadow-lg">
-                <h3 className="text-lg font-semibold text-brand-light mb-4">Vis?o Geral dos Equipamentos</h3>
+                <h3 className="text-lg font-semibold text-brand-light mb-4">Visão Geral dos Equipamentos</h3>
                 <MachineList machines={machines} maintenanceTasks={maintenanceTasks} viewMode="em_campo" availableMachinesToAdd={availableMachinesToAdd} onAddHorimetro={onAddHorimetro} onSelectMachine={onSelectMachine} onAddMachineToDashboard={onAddMachineToDashboard} onRemoveMachineFromDashboard={onRemoveMachineFromDashboard} onUpdateMachineStatus={onUpdateMachineStatus} dashboardMachineIds={dashboardMachineIds}/>
             </div>
 
@@ -672,9 +672,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                 <div>
                     <h3 className="text-lg font-bold text-brand-light flex items-center gap-2">
                         <PrinterIcon className="w-6 h-6 text-brand-accent"/>
-                        Relat?rio de Gest?o de P?tio
+                        Relatório de Gestão de Pátio
                     </h3>
-                    <p className="text-sm text-brand-muted mt-1">Gere um documento PDF detalhado com os equipamentos parados, motivos e previs?es de sa?da.</p>
+                    <p className="text-sm text-brand-muted mt-1">Gere um documento PDF detalhado com os equipamentos parados, motivos e previsões de saída.</p>
                 </div>
                 <button onClick={() => setIsOficinaReportOpen(true)} className="bg-brand-primary hover:bg-slate-800 text-brand-light border border-slate-600 px-6 py-3 rounded-lg text-xs font-bold uppercase shadow-lg flex items-center gap-2 transition-all active:scale-95 whitespace-nowrap">
                     <PrinterIcon className="w-4 h-4 text-brand-accent"/>
@@ -689,7 +689,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                 <h2 className="text-xl font-bold text-brand-light flex items-center gap-2">
                                     <PrinterIcon className="w-6 h-6 text-brand-accent"/> Relatório de Equipamentos em Pátio
                                 </h2>
-                                <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">Pr?-visualiza??o de Documento</p>
+                                <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">Pré-visualização de Documento</p>
                             </div>
                             <button onClick={() => setIsOficinaReportOpen(false)} className="text-brand-muted hover:text-brand-light p-2 rounded-full hover:bg-slate-700 transition-all"><XMarkIcon className="w-6 h-6"/></button>
                         </div>
@@ -711,12 +711,12 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                     <tr>
                                         <th className="p-3 text-left">Prefixo</th>
                                         <th className="p-3 text-left">Equipamento</th>
-                                        <th className="p-3 text-center">Data Paralisa??o</th>
+                                        <th className="p-3 text-center">Data Paralisação</th>
                                         <th className="p-3 text-left">Motivo</th>
-                                        <th className="p-3 text-left">Situa??o</th>
+                                        <th className="p-3 text-left">Situação</th>
                                         <th className="p-3 text-center">Responsável</th>
                                         <th className="p-3 text-center">Tempo Pátio (Útil)</th>
-                                        <th className="p-3 text-center">Previs?o</th>
+                                        <th className="p-3 text-center">Previsão</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">
@@ -973,7 +973,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                   <h2 className="text-xl font-bold text-brand-light flex items-center gap-2">
                                       <PrinterIcon className="w-6 h-6 text-brand-accent"/> Relatório de Controle de Abastecimento
                                   </h2>
-                                  <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">Pr?-visualiza??o de Documento</p>
+                                  <p className="text-xs text-brand-muted uppercase tracking-widest mt-1">Pré-visualização de Documento</p>
                               </div>
                               <button onClick={() => setIsAbastecimentoReportOpen(false)} className="text-brand-muted hover:text-brand-light p-2 rounded-full hover:bg-slate-700 transition-all"><XMarkIcon className="w-6 h-6"/></button>
                           </div>
@@ -1055,7 +1055,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                 <div className="flex items-center gap-3">
                     <div className="bg-brand-accent/20 p-2 rounded-lg"><BridgeIcon className="w-8 h-8 text-brand-accent"/></div>
                     <div>
-                        <h3 className="text-xl font-bold text-brand-light">Gest?o de Pontes</h3>
+                        <h3 className="text-xl font-bold text-brand-light">Gestão de Pontes</h3>
                         <p className="text-[10px] text-brand-muted uppercase font-black tracking-widest">Controle de Projetos e Custos</p>
                     </div>
                 </div>
@@ -1071,11 +1071,11 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
               {/* Cards de Métricas (Novos - Substituindo os antigos) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <MetricCard title="Custos Materiais" value={formatCurrency(bridgeProjectTotals.matCost)} icon={<CubeIcon className="w-8 h-8"/>} color="text-green-400"/>
-                  <MetricCard title="M?o de Obra + Fixos" value={formatCurrency(bridgeProjectTotals.labCost)} icon={<UserGroupIcon className="w-8 h-8"/>} color="text-blue-400"/>
+                  <MetricCard title="Mão de Obra + Fixos" value={formatCurrency(bridgeProjectTotals.labCost)} icon={<UserGroupIcon className="w-8 h-8"/>} color="text-blue-400"/>
                   <MetricCard title="Custo Equipamentos" value={formatCurrency(bridgeProjectTotals.equipCost)} icon={<GraderIcon className="w-8 h-8"/>} color="text-amber-400"/>
                   <div className="relative group cursor-pointer" onClick={() => setIsBridgeReportModalOpen(true)}>
                       <MetricCard title="Custo Total" value={formatCurrency(bridgeProjectTotals.total)} icon={<ChartIcon className="w-8 h-8"/>} color="text-brand-accent"/>
-                      {/* Bot?o flutuante de relat?rio sobre o card */}
+                      {/* Botão flutuante de relatório sobre o card */}
                       <div className="absolute top-2 right-2 bg-brand-light/10 backdrop-blur-sm p-1.5 rounded-full hover:bg-brand-accent/80 transition-all border border-white/20 shadow-lg z-10 group-hover:scale-110">
                           <PrinterIcon className="w-4 h-4 text-white"/>
                       </div>
@@ -1086,7 +1086,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   </div>
               </div>
 
-              {/* Se??o de Di?rios (Mantida) */}
+              {/* Seção de Diários (Mantida) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-amber-500">
                   <h3 className="text-lg font-bold text-brand-light mb-4">Últimos Registros de Diário (Projeto Selecionado)</h3>
                   <div className="space-y-3">
@@ -1150,12 +1150,12 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   </div>
               </div>
 
-              {/* 4. Controle Di?rio de Produ??o (READ ONLY VIEW) (NEW) */}
+              {/* 4. Controle Diário de Produção (READ ONLY VIEW) (NEW) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-orange-500">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                       <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2">
                           <ClipboardListIcon className="w-6 h-6 text-orange-400"/> 
-                          Controle Di?rio de Produ??o
+                          Controle Diário de Produção
                       </h4>
                       <div className="flex items-center gap-2 bg-brand-primary px-3 py-2 rounded-lg border border-slate-700 shadow-inner">
                           <CalendarIcon className="w-4 h-4 text-brand-accent"/>
@@ -1195,9 +1195,9 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                               </div>
                           </div>
                           
-                          {/* Produ??o View */}
+                          {/* Produção View */}
                           <div className="lg:col-span-3 bg-brand-primary p-4 rounded-lg border border-slate-700 space-y-3">
-                              <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-2">Produ??o</h5>
+                              <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-2">Produção</h5>
                               <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">Bruta: {latestProd?.grossCbuq || '-'} t</div>
                               <div className="w-full bg-brand-secondary border border-slate-600 text-brand-muted rounded p-2 text-sm">Rejeito: {latestProd?.waste || '-'} t</div>
                               <div className="bg-slate-700/50 p-3 rounded text-center border border-slate-600 mt-4"><span className="block text-xs text-brand-muted uppercase">Líquida</span><span className="text-2xl font-bold text-green-400">{latestProd?.netCbuq.toFixed(2) || '0.00'} t</span></div>
@@ -1257,5 +1257,3 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
     </div>);
 };
 export default DashboardView;
-
-

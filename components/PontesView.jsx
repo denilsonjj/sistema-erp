@@ -920,9 +920,9 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
                                 <button onClick={() => setEmployeeModalOpen(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-black uppercase shadow-lg hover:bg-blue-500 transition-all flex items-center gap-2"><PlusIcon className="w-3 h-3"/> Novo Colaborador</button>
                             </div>
                         </div>
-                        <div className="overflow-x-auto overflow-visible">
+                        <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded-lg border border-brand-primary/60">
                             <table className="min-w-full text-xs text-left text-brand-muted">
-                                <thead className="bg-brand-primary uppercase"><tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Função</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 text-right">Ações</th></tr></thead>
+                                <thead className="bg-brand-primary uppercase sticky top-0 z-10"><tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Função</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 text-right">Ações</th></tr></thead>
                                 <tbody className="divide-y divide-brand-primary">
                                     {projectEmployees.map(emp => {
                 // Verifica se é demitido com valor pendente
@@ -971,7 +971,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
                 setIsDailyLogModalOpen(true);
             }} className="bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-black uppercase shadow-lg hover:bg-amber-500 transition-all flex items-center gap-2"><PlusIcon className="w-3 h-3"/> Novo Registro</button>
                         </div>
-                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                        <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2">
                             {projectDailyLogs.map(log => (<div key={log.id} className="bg-brand-primary p-5 rounded-xl border border-slate-700 shadow-sm hover:border-amber-500/30 transition-colors">
                                     <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
                                         <div className="flex items-center gap-3">
@@ -1014,7 +1014,7 @@ const PontesView = ({ projects, materials, withdrawals, employees, fixedCosts, m
                 setMaterialModalOpen(true);
             }} className="bg-teal-600 text-white p-2 rounded-lg hover:bg-teal-500 shadow-lg transition-all" title="Adicionar Material"><PlusIcon className="w-4 h-4"/></button>
                         </div>
-                        <div className="space-y-3 overflow-y-auto flex-1 max-h-[600px] pr-1">
+                        <div className="space-y-3 overflow-y-auto flex-1 max-h-[320px] pr-1">
                             {projectMaterials.map(m => (<div key={m.id} className="bg-brand-primary p-3 rounded-lg border border-slate-700 group hover:border-teal-500/30 transition-colors space-y-3">
                                     <div className="space-y-1">
                                         <p className="font-bold text-brand-light text-xs break-words leading-tight">{m.material}</p>

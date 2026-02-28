@@ -806,7 +806,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                           <div className="flex justify-between items-center mb-4">
                               <h4 className="text-lg font-semibold text-brand-light flex items-center gap-2"><TruckIcon className="w-5 h-5 text-green-400"/> Recebimento de Carga</h4>
                           </div>
-                          <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-48 overflow-y-auto">
+                          <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                               <table className="min-w-full text-xs text-left text-brand-muted">
                                   <thead className="bg-slate-800 text-brand-light uppercase sticky top-0"><tr><th className="px-4 py-2">Data</th><th className="px-4 py-2">Fornecedor</th><th className="px-4 py-2 text-right">Volume</th><th className="px-4 py-2 text-right">Preço Un.</th><th className="px-4 py-2 text-right">Total (R$)</th></tr></thead>
                                   <tbody className="divide-y divide-slate-700">
@@ -947,7 +947,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                       </div>
                   </div>
                   
-                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[600px] overflow-y-auto">
+                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                       <table className="min-w-full text-sm text-left text-brand-muted">
                           <thead className="bg-slate-800 text-brand-light uppercase sticky top-0 z-10">
                               <tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Prefixo</th><th className="px-4 py-3">Máquina</th><th className="px-4 py-3 text-right">Diesel (L)</th></tr>
@@ -1141,7 +1141,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
               {/* 2. Histórico Entradas (Ligantes) (NEW) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg">
                   <h5 className="text-brand-light font-bold mb-4 flex items-center gap-2"><TruckIcon className="w-5 h-5 text-blue-400"/> Histórico Entradas (Ligantes)</h5>
-                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[350px] overflow-y-auto">
+                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                       <table className="min-w-full text-sm text-left text-brand-muted">
                           <thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Produto</th><th className="px-4 py-3">NF</th><th className="px-4 py-3 text-right">Peso (t)</th></tr></thead>
                           <tbody>
@@ -1155,7 +1155,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
               {/* 3. Histórico Entradas (Agregados) (NEW) */}
               <div className="bg-brand-secondary p-6 rounded-lg shadow-lg border-t-4 border-green-500">
                   <h5 className="text-brand-light font-bold mb-4">Histórico Entradas (Agregados)</h5>
-                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[350px] overflow-y-auto">
+                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                       <table className="min-w-full table-fixed text-sm text-brand-muted">
                           <colgroup>
                               <col className="w-[34%]" />
@@ -1208,7 +1208,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                           {/* Viagens View */}
                           <div className="lg:col-span-4 bg-brand-primary p-4 rounded-lg border border-slate-700 flex flex-col h-full">
                               <h5 className="text-sm font-bold text-brand-light uppercase border-b border-slate-600 pb-2 mb-3 flex items-center gap-2"><TruckIcon className="w-4 h-4 text-orange-400"/> Viagens ({new Date(displayUsinaDate + 'T00:00:00').toLocaleDateString('pt-BR')})</h5>
-                              <div className="flex-1 overflow-y-auto max-h-48 border border-slate-700 rounded bg-brand-secondary">
+                              <div className="flex-1 overflow-y-auto max-h-[320px] border border-slate-700 rounded bg-brand-secondary">
                                    <table className="w-full text-xs text-brand-muted">
                                        <thead className="bg-slate-700 text-brand-light sticky top-0">
                                            <tr>
@@ -1257,7 +1257,7 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                       </div>
                   </div>
 
-                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[300px] overflow-y-auto">
+                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                        <table className="min-w-full text-sm text-brand-muted">
                            <thead className="bg-slate-800 text-xs uppercase sticky top-0">
                                <tr>

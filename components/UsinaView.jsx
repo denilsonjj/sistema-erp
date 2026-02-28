@@ -411,7 +411,7 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                 </div>
                 <div className="lg:col-span-2">
                     <h5 className="text-brand-light font-bold mb-4 flex items-center gap-2"><TruckIcon className="w-5 h-5 text-blue-400"/> Histórico Entradas (Ligantes)</h5>
-                    <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[350px] overflow-y-auto">
+                    <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                         <table className="min-w-full text-sm text-left text-brand-muted">
                             <thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Produto</th><th className="px-4 py-3">NF</th><th className="px-4 py-3 text-right">Peso (t)</th><th className="px-4 py-3 text-center">Ação</th></tr></thead>
                             <tbody>
@@ -440,7 +440,7 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                             <input type="text" inputMode="decimal" value={loadTemp} onChange={e => setLoadTemp(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs" placeholder="Temp"/>
                         </div>
                         <button type="button" onClick={handleAddLoad} className="w-full bg-orange-600/80 text-white text-xs font-bold py-2 rounded mb-3">Adicionar Carga</button>
-                        <div className="flex-1 overflow-y-auto max-h-48 border border-slate-700 rounded bg-brand-secondary">
+                        <div className="flex-1 overflow-y-auto max-h-[320px] border border-slate-700 rounded bg-brand-secondary">
                              <table className="w-full text-xs text-brand-muted">
                                 <thead className="bg-slate-700 text-brand-light sticky top-0">
                                     <tr>
@@ -490,7 +490,7 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                     </div>
                 </div>
             </form>
-            <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[300px] overflow-y-auto">
+            <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                 <table className="min-w-full table-fixed text-sm text-brand-muted">
                     <colgroup>
                         <col className="w-[22%]" />
@@ -586,7 +586,7 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                 </div>
                 <div className="lg:col-span-2">
                     <h5 className="text-brand-light font-bold mb-4">Histórico Entradas (Agregados)</h5>
-                    <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[350px] overflow-y-auto">
+                    <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                         <table className="min-w-full text-sm text-brand-muted"><thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Product</th><th className="px-4 py-3 text-right">Peso</th><th className="px-4 py-3 text-center">Ações</th></tr></thead><tbody>{deliveries.map((delivery) => (<tr key={delivery.id} className="border-b border-slate-700"><td className="px-4 py-3">{new Date(delivery.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td className="px-4 py-3">{delivery.product}</td><td className="px-4 py-3 text-right font-bold text-green-400">{delivery.tons.toFixed(2)}</td><td className="px-4 py-3 text-center"><button onClick={() => handleDeleteDelivery(delivery.id)} className="text-red-500"><TrashIcon className="w-4 h-4"/></button></td></tr>))}</tbody></table>
                     </div>
                 </div>

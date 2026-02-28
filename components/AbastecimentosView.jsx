@@ -212,7 +212,7 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
                           <div><label className="block text-[10px] font-bold text-brand-muted uppercase mb-1">Fornecedor</label><input type="text" value={delSupplier} onChange={e => setDelSupplier(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs focus:outline-none" required/></div>
                           <div className="flex items-end gap-2"><div className="flex-1"><label className="block text-[10px] font-bold text-brand-muted uppercase mb-1">NF</label><input type="text" value={delTicket} onChange={e => setDelTicket(e.target.value)} className="w-full bg-brand-secondary border border-slate-600 text-brand-light rounded p-1.5 text-xs focus:outline-none"/></div><button type="submit" className="bg-green-600 text-white p-2 rounded hover:bg-green-500 transition-colors"><CheckCircleIcon className="w-5 h-5"/></button></div>
                       </form>)}
-                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-48 overflow-y-auto">
+                  <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                       <table className="min-w-full text-xs text-left text-brand-muted">
                           <thead className="bg-slate-800 text-brand-light uppercase sticky top-0"><tr><th className="px-4 py-2">Data</th><th className="px-4 py-2">Fornecedor</th><th className="px-4 py-2 text-right">Volume</th><th className="px-4 py-2 text-right">Preço Un.</th><th className="px-4 py-2 text-right">Total (R$)</th><th className="px-4 py-2 text-center">Ações</th></tr></thead>
                           <tbody className="divide-y divide-slate-700">
@@ -296,7 +296,7 @@ const AbastecimentosView = ({ machines, maintenanceTasks, records, setRecords, d
               </div>
           </div>
           
-          <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[600px] overflow-y-auto">
+          <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
               <table className="min-w-full text-sm text-left text-brand-muted">
                   <thead className="bg-slate-800 text-brand-light uppercase sticky top-0 z-10">
                       <tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Prefixo</th><th className="px-4 py-3">Máquina</th><th className="px-4 py-3 text-right">Diesel (L)</th><th className="px-4 py-3 text-center">Ações</th></tr>

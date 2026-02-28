@@ -223,9 +223,9 @@ const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleased
             <button onClick={onOpenMaintenanceModal} className="bg-brand-accent text-brand-primary px-4 py-2 rounded-lg font-black text-xs uppercase shadow-lg hover:brightness-110 active:scale-95 transition-all">Agendar Manutenção</button>
         </div>
         
-        <div className="overflow-x-auto overflow-y-visible">
+        <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded-lg border border-brand-primary/60">
           <table className="min-w-full text-xs text-left text-brand-muted">
-            <thead className="bg-brand-primary text-xs uppercase font-black">
+            <thead className="bg-brand-primary text-xs uppercase font-black sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-4 w-28 min-w-[112px]">Prefixo</th>
                 <th className="px-4 py-4">Equipamento</th>
@@ -238,7 +238,7 @@ const OficinaView = ({ machines, allMachines, maintenanceTasks, recentlyReleased
                 <th className="px-4 py-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-brand-primary overflow-visible">
+            <tbody className="divide-y divide-brand-primary">
               {sortedMachines.map(machine => {
             const durationString = calculateDurationString(machine.statusChangeDate, machine.lastStatusChangeTime);
             return (<tr key={machine.id} className="hover:bg-slate-700/50 transition-colors">

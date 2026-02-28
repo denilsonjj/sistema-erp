@@ -103,9 +103,9 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
     const showBrand = viewMode !== 'em_campo' && viewMode !== 'abastecimento';
     const showNextMaintenance = viewMode !== 'em_campo' && viewMode !== 'abastecimento';
     const isAbastecimentoMode = viewMode === 'abastecimento';
-    return (<div className="overflow-x-auto relative">
+    return (<div className="overflow-x-auto overflow-y-auto relative max-h-[320px] rounded-lg border border-brand-primary/60">
       <table className="min-w-full text-sm text-left text-brand-muted">
-        <thead className="bg-brand-primary text-xs uppercase">
+        <thead className="bg-brand-primary text-xs uppercase sticky top-0 z-10">
           <tr>
             <th scope="col" className="px-6 py-3 w-28 min-w-[112px]">Prefixo</th>
             <th scope="col" className="px-6 py-3">Máquina</th>
@@ -117,7 +117,7 @@ const MachineList = ({ machines, maintenanceTasks = [], availableMachinesToAdd =
             {!readOnly && <th scope="col" className="px-6 py-3 text-center">Ações</th>}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-brand-primary">
           {machines.map(machine => {
             const nextDate = getNextMaintenanceDate(machine);
             const hasLubData = lubricationStatusMap[machine.id];

@@ -17,9 +17,9 @@ const DatabaseView = ({ machines, obras, workers, onAddMachine, onEditMachine, o
             Adicionar Obra
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded-lg border border-brand-primary/60">
           <table className="min-w-full text-sm text-left text-brand-muted">
-            <thead className="bg-brand-primary text-xs uppercase">
+            <thead className="bg-brand-primary text-xs uppercase sticky top-0 z-10">
               <tr>
                 <th scope="col" className="px-6 py-3">Nome da Obra</th>
                 <th scope="col" className="px-6 py-3 text-right">Ações</th>
@@ -52,9 +52,9 @@ const DatabaseView = ({ machines, obras, workers, onAddMachine, onEditMachine, o
             Adicionar Máquina
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded-lg border border-brand-primary/60">
           <table className="min-w-full text-sm text-left text-brand-muted">
-            <thead className="bg-brand-primary text-xs uppercase">
+            <thead className="bg-brand-primary text-xs uppercase sticky top-0 z-10">
               <tr>
                 <th scope="col" className="px-6 py-3">Prefixo</th>
                 <th scope="col" className="px-6 py-3">Máquina</th>
@@ -95,9 +95,9 @@ const DatabaseView = ({ machines, obras, workers, onAddMachine, onEditMachine, o
             Adicionar Trabalhador
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded-lg border border-brand-primary/60">
           <table className="min-w-full text-sm text-left text-brand-muted">
-            <thead className="bg-brand-primary text-xs uppercase">
+            <thead className="bg-brand-primary text-xs uppercase sticky top-0 z-10">
               <tr>
                 <th scope="col" className="px-6 py-3">Nome</th>
                 <th scope="col" className="px-6 py-3">Função</th>

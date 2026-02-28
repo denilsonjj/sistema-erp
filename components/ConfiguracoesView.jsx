@@ -210,9 +210,9 @@ const ConfiguracoesView = ({
                     </div>
                 )}
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded-lg border border-brand-primary/60">
                     <table className="min-w-full text-sm text-left text-brand-muted">
-                        <thead className="bg-brand-primary text-xs uppercase">
+                        <thead className="bg-brand-primary text-xs uppercase sticky top-0 z-10">
                             <tr>
                                 <th className="px-4 py-3">Nome</th>
                                 <th className="px-4 py-3">Função</th>

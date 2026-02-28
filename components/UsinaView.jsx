@@ -587,7 +587,32 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                 <div className="lg:col-span-2">
                     <h5 className="text-brand-light font-bold mb-4">Histórico Entradas (Agregados)</h5>
                     <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
-                        <table className="min-w-full text-sm text-brand-muted"><thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Product</th><th className="px-4 py-3 text-right">Peso</th><th className="px-4 py-3 text-center">Ações</th></tr></thead><tbody>{deliveries.map((delivery) => (<tr key={delivery.id} className="border-b border-slate-700"><td className="px-4 py-3">{new Date(delivery.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td className="px-4 py-3">{delivery.product}</td><td className="px-4 py-3 text-right font-bold text-green-400">{delivery.tons.toFixed(2)}</td><td className="px-4 py-3 text-center"><button onClick={() => handleDeleteDelivery(delivery.id)} className="text-red-500"><TrashIcon className="w-4 h-4"/></button></td></tr>))}</tbody></table>
+                        <table className="min-w-full text-sm text-brand-muted">
+                            <thead className="bg-slate-800 text-xs uppercase sticky top-0">
+                                <tr>
+                                    <th className="px-4 py-3">Data</th>
+                                    <th className="px-4 py-3">Produto</th>
+                                    <th className="px-4 py-3">Ticket/NF</th>
+                                    <th className="px-4 py-3 text-right">Peso</th>
+                                    <th className="px-4 py-3 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {deliveries.map((delivery) => (
+                                    <tr key={delivery.id} className="border-b border-slate-700">
+                                        <td className="px-4 py-3">{new Date(delivery.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                        <td className="px-4 py-3">{delivery.product}</td>
+                                        <td className="px-4 py-3">{delivery.ticketNumber || '-'}</td>
+                                        <td className="px-4 py-3 text-right font-bold text-green-400">{delivery.tons.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <button onClick={() => handleDeleteDelivery(delivery.id)} className="text-red-500">
+                                                <TrashIcon className="w-4 h-4"/>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

@@ -1158,14 +1158,16 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                   <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[320px] overflow-y-auto">
                       <table className="min-w-full table-fixed text-sm text-brand-muted">
                           <colgroup>
-                              <col className="w-[34%]" />
-                              <col className="w-[46%]" />
+                              <col className="w-[24%]" />
+                              <col className="w-[38%]" />
                               <col className="w-[20%]" />
+                              <col className="w-[18%]" />
                           </colgroup>
                           <thead className="bg-slate-800 text-xs uppercase sticky top-0 z-10">
                               <tr>
                                   <th className="px-4 py-3 text-left">Data</th>
                                   <th className="px-4 py-3 text-left">Produto</th>
+                                  <th className="px-4 py-3 text-left">Ticket/NF</th>
                                   <th className="px-4 py-3 text-right">Peso</th>
                               </tr>
                           </thead>
@@ -1174,10 +1176,11 @@ const DashboardView = ({ machines, machinesWithIssues, recentlyReleasedMachines 
                                   <tr key={delivery.id} className="border-b border-slate-700 hover:bg-slate-700/50 transition-colors">
                                       <td className="px-4 py-3 whitespace-nowrap">{new Date(delivery.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                                       <td className="px-4 py-3 text-brand-light">{delivery.product}</td>
+                                      <td className="px-4 py-3 text-brand-muted">{delivery.ticketNumber || '-'}</td>
                                       <td className="px-4 py-3 text-right font-bold text-green-400 tabular-nums">{delivery.tons.toFixed(2)}</td>
                                   </tr>
                               ))}
-                              {sortedUsinaDeliveries.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center italic">Sem dados.</td></tr>}
+                              {sortedUsinaDeliveries.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center italic">Sem dados.</td></tr>}
                           </tbody>
                       </table>
                   </div>

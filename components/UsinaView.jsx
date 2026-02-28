@@ -437,7 +437,59 @@ const UsinaView = ({ machines, deliveries, setDeliveries, bituDeliveries, setBit
                 </div>
             </form>
             <div className="overflow-x-auto bg-brand-primary rounded-lg border border-slate-700 max-h-[300px] overflow-y-auto">
-                 <table className="min-w-full text-sm text-brand-muted"><thead className="bg-slate-800 text-xs uppercase sticky top-0"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Prod. Líq</th><th className="px-4 py-3">Rejeito</th><th className="px-4 py-3">CAP</th><th className="px-4 py-3">Horas</th><th className="px-4 py-3">Ações</th></tr></thead><tbody>{productionLogs.map(log => (<tr key={log.id} className="border-b border-slate-700 hover:bg-slate-700/50"><td className="px-4 py-3 whitespace-nowrap text-brand-light">{new Date(log.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td className="px-4 py-3 text-green-400 font-bold">{log.netCbuq.toFixed(2)}</td><td className="px-4 py-3 text-red-400">{log.waste.toFixed(2)}</td><td className="px-4 py-3">{log.capConsumed.toFixed(2)}</td><td className="px-4 py-3">{log.workedHours.toFixed(1)}</td><td className="px-4 py-3 text-center"><button onClick={() => handleDeleteProduction(log.id)} className="text-red-500"><TrashIcon className="w-4 h-4"/></button></td></tr>))}</tbody></table>
+                <table className="min-w-full table-fixed text-sm text-brand-muted">
+                    <colgroup>
+                        <col className="w-[22%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[14%]" />
+                    </colgroup>
+                    <thead className="bg-slate-800 text-xs uppercase sticky top-0 z-10">
+                        <tr>
+                            <th className="px-4 py-3 text-left">Data</th>
+                            <th className="px-4 py-3 text-right">Prod. Líq</th>
+                            <th className="px-4 py-3 text-right">Rejeito</th>
+                            <th className="px-4 py-3 text-right">CAP</th>
+                            <th className="px-4 py-3 text-right">Horas</th>
+                            <th className="px-4 py-3 text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {productionLogs.map(log => (
+                            <tr key={log.id} className="border-b border-slate-700 hover:bg-slate-700/50">
+                                <td className="px-4 py-3 whitespace-nowrap text-brand-light">
+                                    {new Date(log.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                </td>
+                                <td className="px-4 py-3 text-right text-green-400 font-bold tabular-nums">
+                                    {log.netCbuq.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-right text-red-400 tabular-nums">
+                                    {log.waste.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-right tabular-nums">
+                                    {log.capConsumed.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-right tabular-nums">
+                                    {log.workedHours.toFixed(1)}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                    <button onClick={() => handleDeleteProduction(log.id)} className="text-red-500 hover:text-red-400" title="Excluir registro">
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {productionLogs.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-8 text-center italic text-brand-muted">
+                                    Nenhum lançamento de produção.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
         </div>
 
